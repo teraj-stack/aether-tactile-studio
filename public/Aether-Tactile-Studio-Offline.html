@@ -337,9 +337,63 @@
       opacity: 0.74;
       line-height: 1.15;
     }
+
+    /* Intuitive First-Launch Audio & Speaker Permission Sheet (iPhone/iPad/Android) */
+    .audio-gate-backdrop {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(2, 10, 14, 0.84);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .audio-gate-backdrop.hidden { display: none !important; }
+    .audio-gate-card {
+      width: 100%; max-width: 380px; border-radius: 18px; padding: 22px 20px;
+      background: linear-gradient(180deg, #0d2229 0%, #061419 100%);
+      border: 1px solid rgba(103, 232, 249, 0.35);
+      box-shadow: 0 28px 64px rgba(0,0,0,0.72);
+      text-align: center; color: #ecfeff; display: flex; flex-direction: column; gap: 12px;
+    }
+    .audio-gate-icon {
+      width: 52px; height: 52px; margin: 0 auto; border-radius: 14px;
+      background: rgba(56, 224, 240, 0.14); border: 1px solid rgba(56, 224, 240, 0.45);
+      display: flex; align-items: center; justify-content: center; font-size: 24px;
+    }
+    .audio-gate-card h2 { margin: 0; font-size: 17px; font-weight: 700; }
+    .audio-gate-card p { margin: 0; font-size: 12.5px; color: rgba(207, 250, 254, 0.78); line-height: 1.45; }
+    .audio-gate-primary {
+      width: 100%; padding: 13px 16px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #22d3ee, #6366f1); color: #041316;
+      font-size: 14px; font-weight: 800; cursor: pointer;
+    }
+    .audio-gate-secondary {
+      width: 100%; padding: 10px 14px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.06);
+      color: rgba(207, 250, 254, 0.8); font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .audio-status-chip {
+      position: fixed; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 9000;
+      padding: 6px 11px; border-radius: 999px; font-size: 11px; font-weight: 700;
+      border: 1px solid rgba(103, 232, 249, 0.4); background: rgba(4, 19, 22, 0.88);
+      color: #38e0f0; cursor: pointer; backdrop-filter: blur(8px);
+    }
+    .audio-status-chip.muted { border-color: rgba(248, 113, 113, 0.55); color: #fca5a5; }
+
   </style>
 </head>
 <body>
+
+  <!-- Intuitive Speaker Access Prompt (First-Launch Modal for iPhone/iPad/Android) -->
+  <div id="audioGateModal" class="audio-gate-backdrop" role="dialog" aria-modal="true" aria-label="Dostęp do głośników i haptyki">
+    <div class="audio-gate-card">
+      <div class="audio-gate-icon">🔊</div>
+      <h2>Włączyć głośniki i haptykę?</h2>
+      <p>Aether Tactile Studio generuje w czasie rzeczywistym dźwięki materiałów (szkło, stal, zamsz, żel) oraz wibracje. Na iPhonie automatycznie aktywujemy tryb <strong>Playback</strong> (działa nawet z włączonym wyciszeniem).</p>
+      <button type="button" id="audioGateAllow" class="audio-gate-primary">Tak, włącz głośniki i haptykę</button>
+      <button type="button" id="audioGateSilent" class="audio-gate-secondary">Wejdź bez dźwięku (włączę później)</button>
+    </div>
+  </div>
+  <button type="button" id="audioStatusChip" class="audio-status-chip muted">🔇 Dźwięk: dotknij, aby włączyć</button>
+
   <div class="shell">
     <header class="topbar">
       <div class="brand">
@@ -353,7 +407,7 @@
       </div>
     </header>
 
-    <button type="button" id="unlockBanner" class="unlock-banner">
+    <button type="button" id="unlockBanner" class="unlock-banner hidden">
       Dotknij raz, aby aktywować silnik WebAudio (&lt;160 Hz) i haptykę na tablecie / telefonie
     </button>
 
@@ -513,7 +567,7 @@
       document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
       document.addEventListener('selectstart', function (e) { e.preventDefault(); });
       document.querySelectorAll('canvas').forEach(function (cv) {
-        cv.addEventListener('touchstart', function (e) { e.preventDefault(); }, { passive: false });
+        cv.addEventListener('touchstart', function () { if (typeof __unlockMobileAudioNow === 'function' && (!ctx || ctx.state !== 'running')) __unlockMobileAudioNow(false); }, { passive: true });
         cv.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
       });
 
@@ -1253,6 +1307,116 @@
       renderProfiles();
       frame();
       
+    
+
+      // === UNIVERSAL iOS / ANDROID SPEAKER UNLOCK & PLAYBACK SESSION ROUTER ===
+      var __silentAudioEl = null;
+      function __forceIOSPlaybackRoute() {
+        try {
+          if (navigator && navigator.audioSession && 'type' in navigator.audioSession) {
+            navigator.audioSession.type = 'playback';
+          }
+        } catch (e) {}
+        try {
+          if (!__silentAudioEl) {
+            __silentAudioEl = document.createElement('audio');
+            __silentAudioEl.setAttribute('playsinline', '');
+            __silentAudioEl.setAttribute('webkit-playsinline', '');
+            __silentAudioEl.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+            __silentAudioEl.volume = 0.01;
+          }
+          var p = __silentAudioEl.play();
+          if (p && p.catch) p.catch(function () {});
+        } catch (e) {}
+      }
+
+      function __updateAudioChip(ac) {
+        var chip = document.getElementById('audioStatusChip');
+        if (!chip) return;
+        if (ac && ac.state === 'running') {
+          chip.classList.remove('muted');
+          chip.textContent = '🔊 Głośniki: AKTYWNE';
+        } else {
+          chip.classList.add('muted');
+          chip.textContent = '🔇 Dotknij, aby włączyć głośniki';
+        }
+      }
+
+      function __unlockMobileAudioNow(withChime) {
+        __forceIOSPlaybackRoute();
+        var ac = ensureAudio();
+        if (ac) {
+          try {
+            // Play a real 1-sample silent WebAudio buffer synchronously inside the touch gesture (Apple iOS requirement)
+            var buf = ac.createBuffer(1, 1, ac.sampleRate || 44100);
+            var src = ac.createBufferSource();
+            src.buffer = buf;
+            src.connect(ac.destination);
+            src.start(0);
+          } catch (e) {}
+          if (ac.state !== 'running') {
+            ac.resume().then(function () { __updateAudioChip(ac); }).catch(function () {});
+          }
+          if (withChime) {
+            // Crisp audible confirmation ping so user immediately hears speakers are live
+            setTimeout(function () {
+              try {
+                var now = ac.currentTime;
+                var o = ac.createOscillator(); o.type = 'sine';
+                o.frequency.setValueAtTime(880, now);
+                o.frequency.exponentialRampToValueAtTime(1320, now + 0.06);
+                var g = ac.createGain();
+                g.gain.setValueAtTime(0.0001, now);
+                g.gain.linearRampToValueAtTime(0.24, now + 0.004);
+                g.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+                o.connect(g); g.connect(ac.destination);
+                o.start(now); o.stop(now + 0.16);
+              } catch (e) {}
+              __updateAudioChip(ac);
+            }, 30);
+          } else {
+            __updateAudioChip(ac);
+          }
+        }
+        var gate = document.getElementById('audioGateModal');
+        if (gate) gate.classList.add('hidden');
+        var ub = document.getElementById('unlockBtn') || document.getElementById('unlockBanner');
+        if (ub) ub.style.display = 'none';
+      }
+
+      var __allowBtn = document.getElementById('audioGateAllow');
+      var __silentBtn = document.getElementById('audioGateSilent');
+      var __chipBtn = document.getElementById('audioStatusChip');
+      if (__allowBtn) {
+        __allowBtn.addEventListener('click', function () { __unlockMobileAudioNow(true); });
+        __allowBtn.addEventListener('touchend', function (e) { e.preventDefault(); __unlockMobileAudioNow(true); }, { passive: false });
+      }
+      if (__silentBtn) {
+        __silentBtn.addEventListener('click', function () {
+          var gate = document.getElementById('audioGateModal');
+          if (gate) gate.classList.add('hidden');
+        });
+      }
+      if (__chipBtn) {
+        __chipBtn.addEventListener('click', function () { __unlockMobileAudioNow(true); });
+      }
+      // Global capture unlock on first tap anywhere (never blocked by canvas preventDefault!)
+      ['touchstart', 'touchend', 'pointerdown', 'click'].forEach(function (evtName) {
+        window.addEventListener(evtName, function () {
+          if (!ctx || ctx.state !== 'running') {
+            __forceIOSPlaybackRoute();
+            var ac = ensureAudio();
+            if (ac && ac.state !== 'running') ac.resume().then(function () { __updateAudioChip(ac); }).catch(function () {});
+            else __updateAudioChip(ac);
+          }
+        }, { capture: true, passive: true });
+      });
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && ctx && ctx.state === 'suspended') {
+          ctx.resume().then(function () { __updateAudioChip(ctx); }).catch(function () {});
+        }
+      });
+
     })();
   </script>
 </body>
