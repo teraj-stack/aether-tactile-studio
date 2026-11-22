@@ -58,7 +58,8 @@ export type MinimalistLowClickId =
   | 'calacatta-marble-tap-8ms'
   | 'liquid-gold-drop-11ms'
   | 'deep-sub-pulse-16ms'
-  | 'hi-fi-steel-detent-5ms';
+  | 'hi-fi-steel-detent-5ms'
+  | 'sapphire-crystal-ping-2ms';
 
 export interface MinimalistLowClickSpec {
   id: MinimalistLowClickId;
@@ -623,6 +624,23 @@ export const MINIMALIST_LOW_CLICK_VARIANTS: MinimalistLowClickSpec[] = [
     recommendedMaterial: 'matte-metal',
     accentHex: '#CBD5E1',
     codeSnippet: 'hapticAudio.triggerMinimalistLowClick("hi-fi-steel-detent-5ms") // 86→36 Hz · 5 ms',
+  },
+  {
+    id: 'sapphire-crystal-ping-2ms',
+    namePl: '16. Kryształowy Pik Szafiru (Ultra-Short Glass Ping)',
+    shortLabelPl: 'Szafir 2.5 ms · 4.1 kHz',
+    categoryPl: 'Szkło optyczne / Dźwięczny pik',
+    descriptionPl:
+      'Ultrakrótki (2,5 ms), dźwięczny i kryształowy pik szkła optycznego/szafiru z czystymi alikwotami 2,48 / 4,18 / 6,12 kHz bez długiego ogona.',
+    fundamentalHz: 124,
+    pitchDropHz: 78,
+    durationMs: 4,
+    waveform: 'sine',
+    microTransientLevel: 0.42,
+    vibratePulseMs: 4,
+    recommendedMaterial: 'shiny-glass',
+    accentHex: '#7DD3FC',
+    codeSnippet: 'hapticAudio.triggerMinimalistLowClick("sapphire-crystal-ping-2ms") // 124→78 Hz + 4.18 kHz ping · 2.5 ms',
   },
 ];
 

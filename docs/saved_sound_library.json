@@ -1,7 +1,7 @@
 {
   "library": "Aether Tactile Studio — Zoptymalizowana Biblioteka Dźwięków (<160 Hz)",
   "savedAt": "2026-11-22T15:32:00+01:00",
-  "count": 15,
+  "count": 16,
   "profiles": [
     {
       "id": "sub-carbon-6ms",
@@ -152,6 +152,21 @@
       "waveform": "triangle",
       "microTransient": 0.38,
       "vibrateMs": 11
+    },
+    {
+      "id": "sapphire-crystal-ping-2ms",
+      "name": "16. Kryształowy Pik Szafiru (Ultra-Short Glass Ping)",
+      "hz": 124,
+      "dropHz": 78,
+      "durationMs": 2.5,
+      "harmonicsHz": [
+        2480,
+        4180,
+        6120
+      ],
+      "waveform": "sine",
+      "microTransient": 0.42,
+      "vibrateMs": 4
     }
   ]
 }

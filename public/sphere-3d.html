@@ -266,6 +266,50 @@
         osc.start(now); sub.start(now); osc.stop(now + dur + 0.004); sub.stop(now + dur + 0.004);
       }
 
+
+      // Ultra-short, bright, crystalline optical glass / sapphire ping (2.5ms peak + clean resonant harmonics)
+      function playCrystallineGlassPing(mode, label) {
+        var ac = ensureAudio();
+        var gain = Math.max(0.15, Math.min(1.2, intensity / 100));
+        if (navigator.vibrate) { try { navigator.vibrate(mode === 'tick' ? 2 : 4); } catch (e) {} }
+        var hud = document.getElementById('hudStatus');
+        if (hud && mode !== 'tick') {
+          hud.textContent = label + ' · Pik 2,5 ms + alikwoty 2,48 / 4,18 kHz';
+        }
+        if (!ac) return;
+        var now = ac.currentTime;
+        var scale = mode === 'tick' ? 0.48 : 1.0;
+
+        // 1. Ultra-tight optical contact body (2.8 ms, zero muddy tail)
+        var body = ac.createOscillator();
+        body.type = 'sine';
+        body.frequency.setValueAtTime(128, now);
+        body.frequency.exponentialRampToValueAtTime(76, now + 0.0032);
+        var bg = ac.createGain();
+        bg.gain.setValueAtTime(0.0001, now);
+        bg.gain.linearRampToValueAtTime(0.26 * gain * scale, now + 0.00025);
+        bg.gain.exponentialRampToValueAtTime(0.0001, now + 0.0038);
+        body.connect(bg); bg.connect(ac.destination);
+        body.start(now); body.stop(now + 0.005);
+
+        // 2. Crystalline glass harmonic partials (bright, musical, ultra-short 9-14ms ring!)
+        var partials = mode === 'sapphire'
+          ? [[2860, 0.24, 0.011], [4680, 0.20, 0.009], [6920, 0.12, 0.006]]
+          : [[2480, 0.22, 0.010], [4180, 0.17, 0.008], [6120, 0.10, 0.0055]];
+        partials.forEach(function (pt) {
+          var o = ac.createOscillator();
+          o.type = 'sine';
+          o.frequency.setValueAtTime(pt[0], now);
+          o.frequency.exponentialRampToValueAtTime(pt[0] * 0.992, now + pt[2]);
+          var g = ac.createGain();
+          g.gain.setValueAtTime(0.0001, now);
+          g.gain.linearRampToValueAtTime(pt[1] * gain * scale, now + 0.0002);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + pt[2]);
+          o.connect(g); g.connect(ac.destination);
+          o.start(now); o.stop(now + pt[2] + 0.003);
+        });
+      }
+
       function playViscousPull(visc, rough, mode) {
         var ac = ensureAudio();
         if (navigator.vibrate) {
@@ -301,10 +345,10 @@
 
       // Exact physical parameters synced with MATERIAL_PROFILES in src/types/studio.ts
       var MATS = [
-        { id: 'shiny', label: 'Szkło gładkie', sub: 'Gładkie · Lepk. 13%', sound: 'crystal-glass-tap-9ms', color: '#38e0f0', softness: 8, roughness: 6, clutchDamp: 36 },
+        { id: 'sapphire', label: 'Szafir / Kryształ', sub: 'Pik 2,5 ms · Dźwięczny', sound: 'sapphire-crystal-ping-2ms', color: '#7dd3fc', softness: 3, roughness: 2, clutchDamp: 12, glassPing: 'sapphire' },
+        { id: 'shiny', label: 'Szkło gładkie', sub: 'Krótki pik · Lepk. 13%', sound: 'crystal-glass-tap-9ms', color: '#38e0f0', softness: 8, roughness: 6, clutchDamp: 36, glassPing: 'glass' },
         { id: 'frost', label: 'Szkło matowe', sub: 'Matowe · Lepk. 34%', sound: 'velvet-clinic-chime-15ms', color: '#818cf8', softness: 26, roughness: 34, clutchDamp: 52 },
         { id: 'metal', label: 'Metal CNC', sub: 'Twardy · Lepk. 14%', sound: 'leica-shutter-snap-6ms', color: '#2dd4bf', softness: 4, roughness: 28, clutchDamp: 14 },
-        { id: 'abs', label: 'Plastik ABS', sub: 'Polimer · Lepk. 32%', sound: 'satin-tick-4ms', color: '#fbbf24', softness: 32, roughness: 24, clutchDamp: 44 },
         { id: 'suede', label: 'Zamsz', sub: 'Włókno · Lepk. 78%', sound: 'deep-sub-pulse-16ms', color: '#a78bfa', softness: 72, roughness: 88, clutchDamp: 74 },
         { id: 'gel', label: 'Żel / Silikon', sub: 'Lepki · Lepk. 88%', sound: 'vacuum-seal-14ms', color: '#f472b6', softness: 94, roughness: 68, clutchDamp: 90 }
       ];
@@ -487,7 +531,7 @@
           playViscousPull(viscosity, roughness / 100, 'drag');
           hudStatus.textContent = mat.label + ' · lepkość ' + Math.round(viscosity * 100) + '% (szorstkość ' + roughness + '%)';
         } else {
-          playClick(mat.sound, 'Gładki dotyk: ' + mat.label, 7);
+          if (mat.glassPing) playCrystallineGlassPing(mat.glassPing, mat.label); else playClick(mat.sound, 'Gładki dotyk: ' + mat.label, 7);
         }
       });
 
@@ -522,7 +566,7 @@
             playViscousPull(viscosity, roughness / 100, 'drag');
             hudStatus.textContent = 'Tarcie/lepkość ' + Math.round(viscosity * 100) + '% (matowość ' + roughness + '%)';
           } else {
-            playClick('satin-tick-4ms', 'Gładki poślizg 3D', 3, 0.42);
+            if (mat.glassPing) playCrystallineGlassPing('tick', mat.label); else playClick('satin-tick-4ms', 'Gładki poślizg 3D', 3, 0.42);
           }
         }
       });
