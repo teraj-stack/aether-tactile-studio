@@ -51,7 +51,13 @@ export type MinimalistLowClickId =
   | 'satin-tick-4ms'
   | 'anodized-relay-9ms'
   | 'vacuum-seal-14ms'
-  | 'titanium-whisper-7ms';
+  | 'titanium-whisper-7ms'
+  | 'crystal-glass-tap-9ms'
+  | 'leica-shutter-snap-6ms'
+  | 'velvet-clinic-chime-15ms'
+  | 'calacatta-marble-tap-8ms'
+  | 'liquid-gold-drop-11ms'
+  | 'deep-sub-pulse-16ms';
 
 export interface MinimalistLowClickSpec {
   id: MinimalistLowClickId;
@@ -497,6 +503,108 @@ export const MINIMALIST_LOW_CLICK_VARIANTS: MinimalistLowClickSpec[] = [
     recommendedMaterial: 'matte-metal',
     accentHex: '#F472B6',
     codeSnippet: 'hapticAudio.triggerMinimalistLowClick("titanium-whisper-7ms") // 74→41 Hz · 7 ms',
+  },
+  {
+    id: 'crystal-glass-tap-9ms',
+    namePl: '09. Kryształowy Impuls Szkła (BM Clinic)',
+    shortLabelPl: 'Kryształ 108 Hz · 9 ms',
+    categoryPl: 'Luksusowe szkło / CTA',
+    descriptionPl:
+      'Krystalicznie czysty, precyzyjny impuls 108→64 Hz z jasnym mikro-transjentem szkła — idealny do głównych przycisków rezerwacji i kart specjalizacji.',
+    fundamentalHz: 108,
+    pitchDropHz: 64,
+    durationMs: 9,
+    waveform: 'sine',
+    microTransientLevel: 0.28,
+    vibratePulseMs: 6,
+    recommendedMaterial: 'shiny-glass',
+    accentHex: '#38BDF8',
+    codeSnippet: 'hapticAudio.triggerMinimalistLowClick("crystal-glass-tap-9ms") // 108→64 Hz · 9 ms',
+  },
+  {
+    id: 'leica-shutter-snap-6ms',
+    namePl: '10. Migawka Mechaniczna Leica (Precision Snap)',
+    shortLabelPl: 'Leica 94 Hz · 6 ms',
+    categoryPl: 'Precyzja mechaniczna',
+    descriptionPl:
+      'Zwarty, niezwykle satysfakcjonujący klik mechaniczny 94→42 Hz (6 ms, fala trójkątna) wzorowany na precyzyjnej zapadce aparatu fotograficznego.',
+    fundamentalHz: 94,
+    pitchDropHz: 42,
+    durationMs: 6,
+    waveform: 'triangle',
+    microTransientLevel: 0.34,
+    vibratePulseMs: 7,
+    recommendedMaterial: 'matte-metal',
+    accentHex: '#F59E0B',
+    codeSnippet: 'hapticAudio.triggerMinimalistLowClick("leica-shutter-snap-6ms") // 94→42 Hz · 6 ms',
+  },
+  {
+    id: 'velvet-clinic-chime-15ms',
+    namePl: '11. Aksamitny Rezonans Kliniczny (Spokój)',
+    shortLabelPl: 'Aksamit 64 Hz · 15 ms',
+    categoryPl: 'Komfort pacjenta',
+    descriptionPl:
+      'Ciepły, kojący impuls 64→46 Hz (15 ms) bez ostrych krawędzi — zaprojektowany specjalnie dla interfejsu pacjenta BM Clinic.',
+    fundamentalHz: 64,
+    pitchDropHz: 46,
+    durationMs: 15,
+    waveform: 'sine',
+    microTransientLevel: 0.08,
+    vibratePulseMs: 8,
+    recommendedMaterial: 'suede',
+    accentHex: '#A78BFA',
+    codeSnippet: 'hapticAudio.triggerMinimalistLowClick("velvet-clinic-chime-15ms") // 64→46 Hz · 15 ms',
+  },
+  {
+    id: 'calacatta-marble-tap-8ms',
+    namePl: '12. Marmur Calacatta — Stuknięcie Kamienia',
+    shortLabelPl: 'Marmur 82 Hz · 8 ms',
+    categoryPl: 'Architektura / Premium',
+    descriptionPl:
+      'Szlachetny, gęsty dźwięk dotknięcia polerowanego marmuru 82→38 Hz (8 ms) — świetnie współgra z ciemno-złotą stylistyką Sky Lobby.',
+    fundamentalHz: 82,
+    pitchDropHz: 38,
+    durationMs: 8,
+    waveform: 'triangle',
+    microTransientLevel: 0.22,
+    vibratePulseMs: 6,
+    recommendedMaterial: 'frosted-glass',
+    accentHex: '#D4AF37',
+    codeSnippet: 'hapticAudio.triggerMinimalistLowClick("calacatta-marble-tap-8ms") // 82→38 Hz · 8 ms',
+  },
+  {
+    id: 'liquid-gold-drop-11ms',
+    namePl: '13. Złota Kropla Rezonansowa (Liquid Gold)',
+    shortLabelPl: 'Złoto 96 Hz · 11 ms',
+    categoryPl: 'Interakcja premium',
+    descriptionPl:
+      'Płynny, harmoniczny opad 96→54 Hz (11 ms) dający wrażenie dotknięcia płynnego złota lub kropli wody na tafli szkła.',
+    fundamentalHz: 96,
+    pitchDropHz: 54,
+    durationMs: 11,
+    waveform: 'sine',
+    microTransientLevel: 0.19,
+    vibratePulseMs: 7,
+    recommendedMaterial: 'shiny-glass',
+    accentHex: '#FBBF24',
+    codeSnippet: 'hapticAudio.triggerMinimalistLowClick("liquid-gold-drop-11ms") // 96→54 Hz · 11 ms',
+  },
+  {
+    id: 'deep-sub-pulse-16ms',
+    namePl: '14. Głęboki Impuls Sub-Bass 52 Hz (Haptic Thump)',
+    shortLabelPl: 'Sub-Bass 52 Hz · 16 ms',
+    categoryPl: 'Wrażenie fizyczne / Haptic',
+    descriptionPl:
+      'Głęboki, wyczuwalny fizycznie impuls niskotonowy 52→28 Hz (16 ms) do potwierdzania ważnych akcji (np. rezerwacja wizyty, zapis).',
+    fundamentalHz: 52,
+    pitchDropHz: 28,
+    durationMs: 16,
+    waveform: 'sine',
+    microTransientLevel: 0.06,
+    vibratePulseMs: 12,
+    recommendedMaterial: 'suede',
+    accentHex: '#10B981',
+    codeSnippet: 'hapticAudio.triggerMinimalistLowClick("deep-sub-pulse-16ms") // 52→28 Hz · 16 ms',
   },
 ];
 

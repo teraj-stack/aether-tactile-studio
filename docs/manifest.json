@@ -1,0 +1,19 @@
+{
+  "name": "Aether Tactile Studio",
+  "short_name": "Aether Studio",
+  "description": "BM Clinic Proktologia & 14 Sygnatur Haptycznych (<160 Hz) — tryb offline na telefon i tablet.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#041316",
+  "theme_color": "#041316",
+  "icons": [
+    {
+      "src": "./icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

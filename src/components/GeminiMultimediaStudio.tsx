@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Download,
   Film,
+  FolderOutput,
   ImagePlus,
   Loader2,
   Mic,
@@ -11,6 +13,13 @@ import {
 } from 'lucide-react';
 import { useStudio } from '../context/StudioContext';
 import { studioApiFetch } from '../lib/offlineStudioEngines';
+import {
+  analyzeImagePixels,
+  generateFrontendProjectFiles,
+  generateGraphicsFromAnalysis,
+  type GeneratedFrontendBundle,
+  type LocalPixelAnalysis,
+} from '../lib/localImageToFrontend';
 import { isRunningAsStandaloneHtmlFile } from '../hooks/usePWAInstall';
 import { HapticMaterialType } from '../types/studio';
 import { ProgressiveImage } from './ui/ProgressiveImage';
@@ -98,7 +107,7 @@ export const GeminiMultimediaStudio: React.FC = () => {
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const [vidError, setVidError] = useState<string | null>(null);
 
-  // Image Analysis State (gemini-4-argon)
+  // Image Analysis & Image-to-Frontend State
   const [analyzeSource, setAnalyzeSource] = useState<{
     base64: string;
     mime: string;
@@ -112,6 +121,10 @@ export const GeminiMultimediaStudio: React.FC = () => {
     suggestedElevation: number;
     extractedPrompt: string;
   } | null>(null);
+  const [pixelAnalysis, setPixelAnalysis] = useState<LocalPixelAnalysis | null>(null);
+  const [generatedBundle, setGeneratedBundle] = useState<GeneratedFrontendBundle | null>(null);
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const [exportingProject, setExportingProject] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   // Live API Voice Conversation State (gemini-3.8-live)
@@ -234,17 +247,57 @@ export const GeminiMultimediaStudio: React.FC = () => {
     if (!analyzeSource) return;
     setAnalyzeLoading(true);
     setAnalyzeError(null);
+    setExportStatus(null);
     try {
-      const resp = await studioApiFetch('/api/gemini/analyze-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageBase64: analyzeSource.base64,
-          mimeType: analyzeSource.mime,
-        }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || 'Błąd analizy obrazu.');
+      const dataUrl = analyzeSource.base64.startsWith('data:')
+        ? analyzeSource.base64
+        : `data:${analyzeSource.mime || 'image/png'};base64,${analyzeSource.base64}`;
+
+      // 1. Real local pixel-level CV analysis (instant, 100% offline, works on every image)
+      const localMetrics = await analyzeImagePixels(dataUrl);
+      setPixelAnalysis(localMetrics);
+
+      // 2. Generate bespoke SVG + PNG graphic assets & complete runnable frontend project
+      const graphics = generateGraphicsFromAnalysis(localMetrics);
+      const bundle = generateFrontendProjectFiles(localMetrics, graphics, 'Aether Vision UI');
+      setGeneratedBundle(bundle);
+
+      // 3. Optional server / Gemini Vision enrichment (falls back to real localMetrics, never dummy text)
+      let finalData: {
+        summary: string;
+        suggestedMaterial: string;
+        suggestedHardness: number;
+        suggestedGlassBlur: number;
+        suggestedElevation: number;
+        extractedPrompt: string;
+      } = {
+        summary: localMetrics.summary,
+        suggestedMaterial: localMetrics.suggestedMaterial,
+        suggestedHardness: localMetrics.suggestedHardness,
+        suggestedGlassBlur: localMetrics.suggestedGlassBlur,
+        suggestedElevation: localMetrics.suggestedElevation,
+        extractedPrompt: localMetrics.extractedPrompt,
+      };
+
+      try {
+        const resp = await studioApiFetch('/api/gemini/analyze-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: analyzeSource.base64,
+            mimeType: analyzeSource.mime,
+            localMetrics,
+          }),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data && data.summary) {
+            finalData = data;
+          }
+        }
+      } catch {
+        // Keep real localMetrics on pure offline mode
+      }
 
       const validMat: HapticMaterialType = [
         'shiny-glass',
@@ -252,23 +305,61 @@ export const GeminiMultimediaStudio: React.FC = () => {
         'matte-metal',
         'abs-plastic',
         'suede',
-      ].includes(data.suggestedMaterial)
-        ? data.suggestedMaterial
-        : 'frosted-glass';
+      ].includes(finalData.suggestedMaterial)
+        ? (finalData.suggestedMaterial as HapticMaterialType)
+        : localMetrics.suggestedMaterial;
 
       setAnalysisResult({
-        summary: data.summary,
+        summary: finalData.summary,
         suggestedMaterial: validMat,
-        suggestedHardness: Math.max(0, Math.min(100, Number(data.suggestedHardness) || 74)),
-        suggestedGlassBlur: Math.max(6, Math.min(36, Number(data.suggestedGlassBlur) || 20)),
-        suggestedElevation: Math.max(4, Math.min(40, Number(data.suggestedElevation) || 20)),
-        extractedPrompt: data.extractedPrompt,
+        suggestedHardness: Math.max(0, Math.min(100, Number(finalData.suggestedHardness) || localMetrics.suggestedHardness)),
+        suggestedGlassBlur: Math.max(6, Math.min(36, Number(finalData.suggestedGlassBlur) || localMetrics.suggestedGlassBlur)),
+        suggestedElevation: Math.max(4, Math.min(40, Number(finalData.suggestedElevation) || localMetrics.suggestedElevation)),
+        extractedPrompt: finalData.extractedPrompt || localMetrics.extractedPrompt,
       });
     } catch (err: unknown) {
       setAnalyzeError(err instanceof Error ? err.message : 'Błąd analizy zdjęcia.');
     } finally {
       setAnalyzeLoading(false);
     }
+  };
+
+  const handleExportProjectToDisk = async () => {
+    if (!generatedBundle) return;
+    setExportingProject(true);
+    setExportStatus(null);
+    try {
+      const resp = await studioApiFetch('/api/vision/export-project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: generatedBundle.slug,
+          files: generatedBundle.files,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Błąd zapisu projektu.');
+      setExportStatus(`Zapisano ${data.fileCount} plików w: ${data.outputDir}`);
+    } catch (err: unknown) {
+      setExportStatus(
+        err instanceof Error
+          ? `Nie udało się zapisać na serwerze (${err.message}) — użyj przycisku Pobierz HTML.`
+          : 'Błąd zapisu projektu.'
+      );
+    } finally {
+      setExportingProject(false);
+    }
+  };
+
+  const handleDownloadStandaloneHtml = () => {
+    if (!generatedBundle) return;
+    const blob = new Blob([generatedBundle.standaloneHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${generatedBundle.slug}-offline.html`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const stopLiveSession = () => {
@@ -701,20 +792,20 @@ export const GeminiMultimediaStudio: React.FC = () => {
         )}
       </section>
 
-      {/* 3. Image Understanding Analyzer (gemini-4-argon) */}
+      {/* 3. Image Understanding Analyzer + Image-to-Frontend + Graphics Generator */}
       <section
         style={cardSurfaceStyle}
-        className="lg:col-span-6 p-6 sm:p-8 border border-white/80 dark:border-emerald-400/20 space-y-5"
+        className="lg:col-span-12 p-6 sm:p-8 border border-white/80 dark:border-emerald-400/20 space-y-5"
       >
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-xs text-slate-500 dark:text-emerald-300/80 flex items-center gap-1.5">
-              <span>Gemini 4 Argon</span>
+              <span>Aether Vision CV + Gemini</span>
               <span aria-hidden="true">·</span>
-              <span>Analiza Zdjęć i Ekstrakcja Stylu</span>
+              <span>Analiza Pikseli, Generacja Grafik i Projektu Frontendu (100% Offline)</span>
             </div>
             <h3 className="text-xl font-semibold text-slate-900 dark:text-emerald-50 mt-1">
-              Skaner Materiału, Cieni i Szkła
+              Skaner Obrazu → Generator Frontendu i Grafik SVG/PNG
             </h3>
           </div>
           <ScanEye className="w-5 h-5 text-indigo-600 dark:text-emerald-300 shrink-0" />
@@ -723,7 +814,7 @@ export const GeminiMultimediaStudio: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3">
           <label className="px-4 py-2.5 rounded-xl bg-white/80 dark:bg-emerald-950/75 border border-slate-200 dark:border-emerald-400/25 text-xs font-medium text-slate-800 dark:text-emerald-100 inline-flex items-center gap-2 cursor-pointer">
             <Upload className="w-4 h-4" />
-            <span>Wybierz zdjęcie do analizy</span>
+            <span>{analyzeSource ? 'Zmień wgrany obraz' : 'Wybierz obraz / makietę UI'}</span>
             <input
               type="file"
               accept="image/*"
@@ -744,40 +835,142 @@ export const GeminiMultimediaStudio: React.FC = () => {
             {analyzeLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Analizowanie z Gemini 4 Argon...</span>
+                <span>Analiza pikseli i generowanie projektu...</span>
               </>
             ) : (
-              <span>Przeanalizuj strukturę UI</span>
+              <>
+                <Sparkles className="w-4 h-4" />
+                <span>Przeanalizuj obraz i wygeneruj frontend + grafiki</span>
+              </>
             )}
           </button>
         </div>
+
+        {analyzeSource && !analysisResult && (
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/50 dark:bg-emerald-950/40 border border-slate-200/70 dark:border-emerald-400/20">
+            <img
+              src={
+                analyzeSource.base64.startsWith('data:')
+                  ? analyzeSource.base64
+                  : `data:${analyzeSource.mime};base64,${analyzeSource.base64}`
+              }
+              alt="Podgląd wgranego obrazu"
+              className="w-24 h-16 object-cover rounded-xl border border-slate-200 dark:border-emerald-400/25"
+            />
+            <span className="text-xs text-slate-600 dark:text-emerald-200">
+              Obraz wczytany. Kliknij <strong>Przeanalizuj obraz i wygeneruj frontend + grafiki</strong>, aby wydobyć paletę kolorów, układ, grafiki SVG i gotowy kod projektu.
+            </span>
+          </div>
+        )}
 
         {analyzeError && (
           <p className="text-xs text-rose-600 dark:text-rose-300">{analyzeError}</p>
         )}
 
-        {analysisResult && (
-          <div className="p-4 rounded-2xl bg-white/60 dark:bg-emerald-950/55 border border-slate-200/80 dark:border-emerald-400/20 space-y-3">
+        {analysisResult && pixelAnalysis && generatedBundle && (
+          <div className="p-5 rounded-2xl bg-white/65 dark:bg-emerald-950/55 border border-slate-200/80 dark:border-emerald-400/20 space-y-5">
             <p className="text-xs text-slate-700 dark:text-emerald-100 leading-relaxed">
               {analysisResult.summary}
             </p>
-            <div className="text-xs font-mono tabular-nums text-slate-600 dark:text-emerald-300">
-              Materiał: {analysisResult.suggestedMaterial} · Twardość: {analysisResult.suggestedHardness} Sh · Rozmycie: {analysisResult.suggestedGlassBlur}px
+
+            {/* Real Extracted Color Swatches + Physics */}
+            <div className="flex flex-wrap items-center gap-2">
+              {pixelAnalysis.palette.map((hex) => (
+                <span
+                  key={hex}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/80 dark:bg-slate-900/70 border border-slate-200 dark:border-emerald-400/25 text-[11px] font-mono text-slate-700 dark:text-emerald-100"
+                >
+                  <span
+                    className="w-3 h-3 rounded-sm border border-black/15"
+                    style={{ backgroundColor: hex }}
+                  />
+                  {hex}
+                </span>
+              ))}
+              <span className="text-[11px] font-mono text-slate-600 dark:text-emerald-300 ml-1">
+                Materiał: {analysisResult.suggestedMaterial} · {analysisResult.suggestedHardness} Sh · Blur: {analysisResult.suggestedGlassBlur}px · Siatka: {pixelAnalysis.layout.suggestedColumns} kol.
+              </span>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                selectMaterialProfile(analysisResult.suggestedMaterial, { silent: true });
-                updateHaptic({ materialHardness: analysisResult.suggestedHardness });
-                updateDepth({
-                  glassBlur: analysisResult.suggestedGlassBlur,
-                  elevation: analysisResult.suggestedElevation,
-                });
-              }}
-              className="py-2 px-3.5 rounded-xl bg-indigo-600 dark:bg-emerald-400 text-white dark:text-emerald-950 text-xs font-semibold cursor-pointer whitespace-nowrap"
-            >
-              Zastosuj rozpoznane parametry w całym studiu
-            </button>
+
+            {/* Generated Graphics Strip */}
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-slate-800 dark:text-emerald-100">
+                Wygenerowane grafiki dopasowane do palety obrazu (4 zasoby):
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {generatedBundle.graphics.map((asset) => (
+                  <div
+                    key={asset.filename}
+                    className="p-2 rounded-xl bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-emerald-400/20 space-y-1.5"
+                  >
+                    <img
+                      src={asset.dataUrl}
+                      alt={asset.label}
+                      className="w-full h-20 object-cover rounded-lg border border-black/10"
+                    />
+                    <div className="text-[11px] font-medium text-slate-700 dark:text-emerald-100 truncate">
+                      {asset.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Live Interactive Frontend Preview */}
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-slate-800 dark:text-emerald-100">
+                Żywy podgląd wygenerowanego frontendu:
+              </div>
+              <iframe
+                title="Wygenerowany projekt frontendu"
+                srcDoc={generatedBundle.standaloneHtml}
+                className="w-full h-[380px] rounded-2xl border border-slate-300/80 dark:border-emerald-400/30 bg-slate-950"
+                sandbox="allow-scripts"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  selectMaterialProfile(analysisResult.suggestedMaterial, { silent: true });
+                  updateHaptic({ materialHardness: analysisResult.suggestedHardness });
+                  updateDepth({
+                    glassBlur: analysisResult.suggestedGlassBlur,
+                    elevation: analysisResult.suggestedElevation,
+                  });
+                }}
+                className="py-2 px-3.5 rounded-xl bg-indigo-600 dark:bg-emerald-400 text-white dark:text-emerald-950 text-xs font-semibold cursor-pointer whitespace-nowrap"
+              >
+                Zastosuj parametry w całym studiu
+              </button>
+
+              <button
+                type="button"
+                disabled={exportingProject}
+                onClick={handleExportProjectToDisk}
+                className="py-2 px-3.5 rounded-xl bg-slate-900 dark:bg-emerald-900/80 text-white dark:text-emerald-50 border border-slate-700 dark:border-emerald-400/40 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap disabled:opacity-50"
+              >
+                <FolderOutput className="w-3.5 h-3.5" />
+                <span>{exportingProject ? 'Zapisywanie...' : 'Zapisz projekt na dysku (scratch/)'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadStandaloneHtml}
+                className="py-2 px-3.5 rounded-xl bg-white/85 dark:bg-emerald-950/80 text-slate-800 dark:text-emerald-100 border border-slate-300 dark:border-emerald-400/30 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Pobierz jako 1 plik HTML (Offline)</span>
+              </button>
+            </div>
+
+            {exportStatus && (
+              <p className="text-xs font-mono text-emerald-700 dark:text-emerald-300 break-all">
+                {exportStatus}
+              </p>
+            )}
           </div>
         )}
       </section>

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import http from 'http';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as dotenv from 'dotenv';
@@ -2264,9 +2265,9 @@ Paleta: ${palette}, Materiał dotyku: ${material}, Głębia cieni: ${JSON.string
     }
   });
 
-  // 3. Analyze Uploaded Photo with automatic quota fallback
+  // 3. Analyze Uploaded Photo with real local pixel-analysis fallback + Gemini Vision enrichment
   app.post('/api/gemini/analyze-image', async (req, res) => {
-    const { imageBase64, mimeType, question } = req.body || {};
+    const { imageBase64, mimeType, question, localMetrics } = req.body || {};
     if (!imageBase64) {
       return res.status(400).json({ error: 'Brak obrazu do analizy.' });
     }
@@ -2323,19 +2324,208 @@ Paleta: ${palette}, Materiał dotyku: ${material}, Głębia cieni: ${JSON.string
       );
 
       const parsed = JSON.parse((response.text ?? '{}').trim());
-      res.json(parsed);
+      res.json({ ...parsed, analysisEngine: 'gemini-vision' });
     } catch {
+      if (localMetrics && typeof localMetrics === 'object') {
+        res.json({
+          summary: String(localMetrics.summary || 'Analiza pikseli ukończona.'),
+          suggestedMaterial: String(localMetrics.suggestedMaterial || 'frosted-glass'),
+          suggestedHardness: Number(localMetrics.suggestedHardness) || 74,
+          suggestedGlassBlur: Number(localMetrics.suggestedGlassBlur) || 20,
+          suggestedElevation: Number(localMetrics.suggestedElevation) || 18,
+          extractedPrompt: String(localMetrics.extractedPrompt || ''),
+          analysisEngine: 'local-pixel-cv',
+        });
+        return;
+      }
       res.json({
         summary:
-          'Wykryto wielowarstwową architekturę interfejsu z wyraźną hierarchią kart, subtelnym rozmyciem tła i kontrastowymi punktami akcji (analiza lokalna Zero-Limit).',
+          'Wykryto wielowarstwową architekturę interfejsu z wyraźną hierarchią kart i kontrastowymi punktami akcji (analiza lokalna Zero-Limit).',
         suggestedMaterial: 'frosted-glass',
         suggestedHardness: 78,
         suggestedGlassBlur: 22,
         suggestedElevation: 18,
         extractedPrompt:
           'Clean architectural 1440px desktop UI with frosted optical glass cards, crisp Fresnel top rim highlights, balanced 60-30-10 neutral palette, and high-contrast interactive controls.',
+        analysisEngine: 'local-fallback',
       });
     }
+  });
+
+  // 3b. Export Generated Frontend Project + Graphics directly to local scratch/generated-frontends/
+  app.post('/api/vision/export-project', (req, res) => {
+    try {
+      const { slug = 'generated-frontend', files = {} } = req.body || {};
+      if (!files || typeof files !== 'object' || Object.keys(files).length === 0) {
+        return res.status(400).json({ error: 'Brak plików projektu do zapisania.' });
+      }
+      const safeSlug =
+        String(slug)
+          .toLowerCase()
+          .replace(/[^a-z0-9-]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 48) || 'generated-frontend';
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const baseExportRoot = path.resolve(__dirname, '..', 'generated-frontends');
+      const outputDir = path.join(baseExportRoot, `${safeSlug}-${stamp}`);
+      fs.mkdirSync(outputDir, { recursive: true });
+
+      let fileCount = 0;
+      for (const [relPath, rawContent] of Object.entries(files as Record<string, string>)) {
+        const normalized = path.normalize(relPath).replace(/^(\.\.(\/|\\|$))+/, '');
+        const fullPath = path.join(outputDir, normalized);
+        if (!fullPath.startsWith(outputDir)) continue;
+        fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+
+        if (typeof rawContent === 'string' && rawContent.startsWith('data:image/')) {
+          const commaIdx = rawContent.indexOf(',');
+          const b64 = commaIdx >= 0 ? rawContent.slice(commaIdx + 1) : rawContent;
+          fs.writeFileSync(fullPath, Buffer.from(b64, 'base64'));
+        } else {
+          fs.writeFileSync(fullPath, String(rawContent ?? ''), 'utf-8');
+        }
+        fileCount++;
+      }
+
+      const launcherPath = path.join(outputDir, 'open-offline.command');
+      fs.writeFileSync(
+        launcherPath,
+        `#!/usr/bin/env zsh\nDIR="$(cd "$(dirname "$0")" && pwd)"\nopen "$DIR/index.html"\n`,
+        { mode: 0o755 }
+      );
+      fileCount++;
+
+      res.json({ ok: true, outputDir, fileCount });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Błąd zapisu projektu na dysk.';
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // 3c. Detect installed local Apple Silicon / HTTP diffusion engines (mflux / Draw Things / A1111)
+  app.get('/api/vision/local-engines', async (_req, res) => {
+    const { execFileSync } = await import('child_process');
+    let mfluxAvailable = false;
+    try {
+      execFileSync('which', ['mflux-generate'], { stdio: 'ignore' });
+      mfluxAvailable = true;
+    } catch {
+      mfluxAvailable = false;
+    }
+
+    let localHttpApiAvailable = false;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 800);
+      const r = await fetch('http://127.0.0.1:7860/sdapi/v1/sd-models', { signal: ctrl.signal });
+      clearTimeout(timer);
+      localHttpApiAvailable = r.ok;
+    } catch {
+      localHttpApiAvailable = false;
+    }
+
+    res.json({
+      proceduralCanvas: true,
+      mfluxAvailable,
+      localHttpApiAvailable,
+      installMfluxHint: 'uv tool install mflux',
+      localHttpEndpoint: 'http://127.0.0.1:7860',
+    });
+  });
+
+  // 3d. Generate photorealistic image via local Apple Silicon mflux or local HTTP API (Draw Things / A1111)
+  app.post('/api/vision/generate-local-image', async (req, res) => {
+    const {
+      prompt,
+      negativePrompt = '',
+      width = 1024,
+      height = 576,
+      localApiUrl = 'http://127.0.0.1:7860',
+    } = req.body || {};
+
+    if (!prompt) {
+      return res.status(400).json({ error: 'Brak promptu do wygenerowania grafiki.' });
+    }
+
+    // 1. Try local HTTP API (Draw Things / Automatic1111 / Forge) if reachable
+    try {
+      const cleanUrl = String(localApiUrl || 'http://127.0.0.1:7860').replace(/\/+$/, '');
+      if (cleanUrl.startsWith('http://127.0.0.1') || cleanUrl.startsWith('http://localhost')) {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 45000);
+        const resp = await fetch(`${cleanUrl}/sdapi/v1/txt2img`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt,
+            negative_prompt: negativePrompt,
+            width: Number(width) || 1024,
+            height: Number(height) || 576,
+            steps: 8,
+          }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        if (resp.ok) {
+          const data = (await resp.json()) as { images?: string[] };
+          if (data.images?.[0]) {
+            return res.json({
+              ok: true,
+              engine: 'local-http-sdapi',
+              imageDataUrl: `data:image/png;base64,${data.images[0]}`,
+            });
+          }
+        }
+      }
+    } catch {
+      // Fall through to mflux check
+    }
+
+    // 2. Try local mflux-generate (FLUX.1-schnell on Apple Metal)
+    try {
+      const { execFile } = await import('child_process');
+      const os = await import('os');
+      const outPath = path.join(os.tmpdir(), `aether-mflux-${Date.now()}.png`);
+      await new Promise<void>((resolve, reject) => {
+        execFile(
+          'mflux-generate',
+          [
+            '--model',
+            'schnell',
+            '--steps',
+            '4',
+            '--width',
+            String(Number(width) || 1024),
+            '--height',
+            String(Number(height) || 576),
+            '--prompt',
+            String(prompt),
+            '--output',
+            outPath,
+          ],
+          { timeout: 120000 },
+          (err) => (err ? reject(err) : resolve())
+        );
+      });
+      if (fs.existsSync(outPath)) {
+        const b64 = fs.readFileSync(outPath).toString('base64');
+        fs.unlinkSync(outPath);
+        return res.json({
+          ok: true,
+          engine: 'mflux-apple-metal',
+          imageDataUrl: `data:image/png;base64,${b64}`,
+        });
+      }
+    } catch {
+      // Neither local diffusion engine installed
+    }
+
+    return res.status(200).json({
+      ok: false,
+      fallbackToBrowserRenderer: true,
+      message:
+        'Użyto wbudowanego lokalnego renderera studyjnego (100% offline). Aby podłączyć FLUX.1-schnell na Apple Silicon, zainstaluj: uv tool install mflux lub włącz lokalny serwer API w Draw Things (127.0.0.1:7860).',
+    });
   });
 
   // 4. Create & Edit High-Quality Images (gemini-nano-banana-2.1 & gemini-3-pro-image-preview, 1K/2K/4K, all aspect ratios)
@@ -3369,6 +3559,43 @@ export default ${safeComp};
   });
 
   // ============================================================================
+  // Local Network Info Endpoint (for Mobile QR Haptics Testing)
+  // ============================================================================
+  app.get('/api/network-info', (req, res) => {
+    const interfaces = os.networkInterfaces();
+    const candidates: Array<{ name: string; address: string }> = [];
+    for (const [name, addrs] of Object.entries(interfaces)) {
+      if (!addrs) continue;
+      for (const info of addrs) {
+        if (info.family === 'IPv4' && !info.internal) {
+          candidates.push({ name, address: info.address });
+        }
+      }
+    }
+    // Prefer Wi-Fi / primary interfaces (en0, en1, wlan0)
+    candidates.sort((a, b) => {
+      const score = (n: string) =>
+        n === 'en0' ? 0 : n === 'en1' ? 1 : n.startsWith('wlan') || n.startsWith('wi') ? 2 : 3;
+      return score(a.name) - score(b.name);
+    });
+
+    const port = Number(process.env.PORT) || 3000;
+    const protocol = req.protocol === 'https' ? 'https' : 'http';
+    const lanIps = candidates.map((c) => c.address);
+    const lanIp = lanIps[0] || 'localhost';
+
+    res.json({
+      port,
+      protocol,
+      lanIp,
+      lanIps,
+      hostname: os.hostname(),
+      lanUrl: `${protocol}://${lanIp}:${port}`,
+      localUrl: `${protocol}://localhost:${port}`,
+    });
+  });
+
+  // ============================================================================
   // Vite Middleware (Dev) or Static Assets (Production)
   // ============================================================================
   if (process.env.NODE_ENV !== 'production') {
@@ -3384,8 +3611,24 @@ export default ${safeComp};
     app.use(vite.middlewares);
   } else {
     const distPath = path.resolve(__dirname, 'dist');
-    app.use(express.static(distPath));
+    // Prevent stale Service Worker / cached HTML from serving outdated Vite dev pages
+    app.get('/sw.js', (_req, res) => {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.send(`self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))).then(()=>self.registration.unregister()));});`);
+    });
+    app.use(
+      express.static(distPath, {
+        index: false,
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+          }
+        },
+      })
+    );
     app.get('*', (_req, res) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

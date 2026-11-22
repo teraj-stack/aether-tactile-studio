@@ -16,6 +16,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { useStudio } from '../context/StudioContext';
+import { ImageToFrontendCard } from './ImageToFrontendCard';
 import { hapticAudio } from '../lib/hapticAudioEngine';
 import {
   FRONTEND_ELEMENT_SHADE_ORDER,
@@ -402,6 +403,9 @@ export const StartWorkspaceSection: React.FC<{
       }}
       className="space-y-6"
     >
+      {/* Direct 100% Offline Image-to-Frontend + Graphics Generator right at the top */}
+      <ImageToFrontendCard />
+
       {/* Hero Proposition & Primary Action Card */}
       <section
         style={cardSurfaceStyle}

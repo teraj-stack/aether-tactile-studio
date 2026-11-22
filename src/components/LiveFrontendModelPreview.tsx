@@ -16,6 +16,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useStudio } from '../context/StudioContext';
+import { BM_CLINIC_REGION_HAPTICS } from '../lib/bmClinicProktologiaScreen';
 import { hapticAudio } from '../lib/hapticAudioEngine';
 import {
   DEFAULT_ZONE_SHADES,
@@ -372,8 +373,12 @@ export const LiveFrontendModelPreview: React.FC = () => {
 
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [viewMode, setViewMode] = useState<'interactive' | 'reference' | 'code'>(
-    'interactive'
+    workingFrontendImage ? 'reference' : 'interactive'
   );
+  const [overlayStyle, setOverlayStyle] = useState<'transparent' | 'subtle' | 'labels'>('transparent');
+  const [flashingRegionId, setFlashingRegionId] = useState<string | null>(null);
+  const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
+  const [expandedPreview, setExpandedPreview] = useState<boolean>(false);
   const [dragOverZone, setDragOverZone] = useState<PrototypeDropZone | null>(null);
   const [widgetSliderVals, setWidgetSliderVals] = useState<Record<string, number>>({});
   const [widgetToggles, setWidgetToggles] = useState<Record<string, boolean>>({});
@@ -1026,70 +1031,265 @@ ${screenElements
       {/* Uploaded Working Frontend Image Full Overlay Mode */}
       {workingFrontendImage && viewMode === 'reference' && (
         <div className="space-y-2.5">
-          <div className="relative rounded-2xl overflow-hidden border border-slate-300/80 dark:border-emerald-400/25 bg-slate-900">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+            <div className="text-[11px] font-semibold text-slate-800 dark:text-emerald-100 truncate">
+              {workingFrontendImage.fileName} · {workingFrontendImage.regions.length} stref
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="inline-flex items-center gap-0.5 p-0.5 rounded-lg bg-slate-200/75 dark:bg-emerald-900/60 text-[10px]">
+                {(
+                  [
+                    ['transparent', 'Transparentne'],
+                    ['subtle', 'Subtelne'],
+                    ['labels', 'Etykiety'],
+                  ] as const
+                ).map(([mode, lbl]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setOverlayStyle(mode)}
+                    className={`px-2 py-1 rounded-md font-medium cursor-pointer transition-colors ${
+                      overlayStyle === mode
+                        ? isDark
+                          ? 'bg-emerald-400 text-emerald-950 font-semibold'
+                          : 'bg-white text-slate-900 font-semibold shadow-sm'
+                        : 'text-slate-600 dark:text-emerald-200/75'
+                    }`}
+                  >
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setExpandedPreview(true)}
+                className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-indigo-600 dark:bg-emerald-400 text-white dark:text-emerald-950 hover:opacity-95 cursor-pointer whitespace-nowrap"
+              >
+                Powiększ
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-3xl overflow-hidden border border-white/60 dark:border-emerald-400/25 shadow-2xl bg-transparent">
             {!refImgBroken ? (
-              <img
-                src={workingFrontendImage.dataUrl}
-                alt={workingFrontendImage.fileName}
-                referrerPolicy="no-referrer"
-                onError={() => setRefImgBroken(true)}
-                className="w-full max-h-[420px] object-contain mx-auto block"
-              />
+              <div className="relative w-full">
+                <img
+                  src={workingFrontendImage.dataUrl}
+                  alt={workingFrontendImage.fileName}
+                  referrerPolicy="no-referrer"
+                  onError={() => setRefImgBroken(true)}
+                  className="w-full h-auto block select-none"
+                />
+
+                <div className="absolute inset-0 pointer-events-none">
+                  {workingFrontendImage.regions.map((reg) => {
+                    const shade = FRONTEND_ELEMENT_SHADES[reg.shadeId];
+                    const regHaptic = BM_CLINIC_REGION_HAPTICS[reg.id];
+                    const isMod = activeModifiedElement?.id === reg.id;
+                    const isFlashing = flashingRegionId === reg.id;
+                    const isHovered = hoveredRegionId === reg.id;
+                    return (
+                      <button
+                        key={reg.id}
+                        type="button"
+                        title={`${reg.label}${regHaptic ? ` — ${regHaptic.rolePl}` : ''}`}
+                        onPointerEnter={() => {
+                          setHoveredRegionId(reg.id);
+                          if (haptic.enabled) {
+                            hapticAudio.triggerMinimalistLowClick('satin-tick-4ms', 0.14);
+                          }
+                        }}
+                        onPointerLeave={() => {
+                          setHoveredRegionId((prev) => (prev === reg.id ? null : prev));
+                        }}
+                        onPointerDown={() => {
+                          setFlashingRegionId(reg.id);
+                          window.setTimeout(() => {
+                            setFlashingRegionId((prev) => (prev === reg.id ? null : prev));
+                          }, 220);
+
+                          const chosenSound =
+                            haptic.minimalistClickVariant &&
+                            haptic.minimalistClickVariant !== 'none'
+                              ? haptic.minimalistClickVariant
+                              : regHaptic?.soundId;
+
+                          if (chosenSound) {
+                            hapticAudio.triggerMinimalistLowClick(
+                              chosenSound,
+                              Math.max(0.32, haptic.intensity / 100)
+                            );
+                            pulseInteraction(0.95);
+                          } else {
+                            triggerPreviewFeedback(2);
+                          }
+
+                          if (
+                            typeof navigator !== 'undefined' &&
+                            'vibrate' in navigator &&
+                            regHaptic
+                          ) {
+                            try {
+                              navigator.vibrate(regHaptic.vibrateMs);
+                            } catch {
+                              // Ignore
+                            }
+                          }
+                        }}
+                        onClick={() => {
+                          markElementAsActivelyModified({
+                            id: reg.id,
+                            kind: 'region',
+                            label: reg.label,
+                            zone: reg.zone,
+                            screenId: activeScreen?.id,
+                            shadeId: reg.shadeId,
+                            sourceSurface: 'Podgląd obrazu frontendu',
+                          });
+                        }}
+                        style={{
+                          left: `${reg.xPct}%`,
+                          top: `${reg.yPct}%`,
+                          width: `${reg.wPct}%`,
+                          height: `${reg.hPct}%`,
+                          borderColor: isFlashing
+                            ? 'rgba(125, 249, 255, 0.95)'
+                            : isHovered
+                              ? 'rgba(103, 232, 249, 0.72)'
+                              : overlayStyle === 'transparent'
+                                ? 'rgba(103, 232, 249, 0.14)'
+                                : overlayStyle === 'subtle'
+                                  ? 'rgba(103, 232, 249, 0.42)'
+                                  : shade.activeBorderHex,
+                          backgroundColor: isFlashing
+                            ? 'rgba(56, 224, 240, 0.28)'
+                            : isHovered
+                              ? 'rgba(56, 224, 240, 0.11)'
+                              : overlayStyle === 'labels' && isMod
+                                ? 'rgba(56, 224, 240, 0.14)'
+                                : 'transparent',
+                          boxShadow: isFlashing
+                            ? '0 0 26px rgba(56, 224, 240, 0.78), inset 0 0 18px rgba(255,255,255,0.42)'
+                            : isHovered
+                              ? '0 0 16px rgba(56, 224, 240, 0.35), inset 0 0 10px rgba(255,255,255,0.16)'
+                              : undefined,
+                        }}
+                        className="pointer-events-auto absolute rounded-2xl border p-1 flex items-end justify-end text-left cursor-pointer transition-all duration-150 active:scale-[0.97]"
+                      >
+                        {(overlayStyle === 'labels' || isHovered || isFlashing) && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-950/65 text-cyan-100 backdrop-blur-md border border-cyan-300/35 truncate max-w-full shadow-sm">
+                            {reg.label}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             ) : (
               <div className="h-48 flex items-center justify-center text-xs text-slate-300">
                 Obraz referencyjny ({workingFrontendImage.fileName})
               </div>
             )}
-
-            <div className="absolute inset-0 pointer-events-none">
-              {workingFrontendImage.regions.map((reg) => {
-                const shade = FRONTEND_ELEMENT_SHADES[reg.shadeId];
-                const isMod =
-                  activeModifiedElement?.id === reg.id ||
-                  activeModifiedElement?.zone === reg.zone;
-                return (
-                  <button
-                    key={reg.id}
-                    type="button"
-                    onClick={() => {
-                      markElementAsActivelyModified({
-                        id: reg.id,
-                        kind: 'region',
-                        label: reg.label,
-                        zone: reg.zone,
-                        screenId: activeScreen?.id,
-                        shadeId: reg.shadeId,
-                        sourceSurface: 'Podgląd obrazu frontendu',
-                      });
-                      triggerPreviewFeedback(2);
-                    }}
-                    style={{
-                      left: `${reg.xPct}%`,
-                      top: `${reg.yPct}%`,
-                      width: `${reg.wPct}%`,
-                      height: `${reg.hPct}%`,
-                      borderColor: shade.activeBorderHex,
-                      backgroundColor: isMod
-                        ? shade.activeOverlayFill
-                        : 'rgba(15, 23, 42, 0.08)',
-                      boxShadow: isMod ? shade.activeGlowShadow : undefined,
-                    }}
-                    className="pointer-events-auto absolute rounded-xl border-2 p-1.5 flex items-start justify-between text-left cursor-pointer"
-                  >
-                    <span
-                      style={{
-                        backgroundColor: shade.badgeBgHex,
-                        color: shade.badgeTextHex,
-                      }}
-                      className="px-1.5 py-0.5 rounded text-[10px] font-semibold truncate max-w-full"
-                    >
-                      {shade.shortNamePl}: {reg.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
+
+          {/* Full-Height Lightbox Preview Modal when "Powiększ" is clicked */}
+          {expandedPreview && !refImgBroken && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-lg"
+              onClick={() => setExpandedPreview(false)}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="relative max-h-[92vh] flex flex-col items-center gap-3"
+              >
+                <div className="flex items-center justify-between w-full text-xs text-white/90 px-1">
+                  <span className="font-semibold">
+                    {workingFrontendImage.fileName} — Pełny tryb testowania kliknięć
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedPreview(false)}
+                    className="px-3 py-1 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold cursor-pointer"
+                  >
+                    Zamknij ✕
+                  </button>
+                </div>
+                <div className="relative inline-block rounded-3xl overflow-hidden shadow-2xl border border-cyan-300/35">
+                  <img
+                    src={workingFrontendImage.dataUrl}
+                    alt={workingFrontendImage.fileName}
+                    className="max-h-[84vh] w-auto h-auto block select-none"
+                  />
+                  <div className="absolute inset-0 pointer-events-none">
+                    {workingFrontendImage.regions.map((reg) => {
+                      const regHaptic = BM_CLINIC_REGION_HAPTICS[reg.id];
+                      const isFlashing = flashingRegionId === reg.id;
+                      const isHovered = hoveredRegionId === reg.id;
+                      return (
+                        <button
+                          key={`exp-${reg.id}`}
+                          type="button"
+                          title={reg.label}
+                          onPointerEnter={() => {
+                            setHoveredRegionId(reg.id);
+                            if (haptic.enabled) {
+                              hapticAudio.triggerMinimalistLowClick('satin-tick-4ms', 0.14);
+                            }
+                          }}
+                          onPointerLeave={() => {
+                            setHoveredRegionId((prev) => (prev === reg.id ? null : prev));
+                          }}
+                          onPointerDown={() => {
+                            setFlashingRegionId(reg.id);
+                            window.setTimeout(() => {
+                              setFlashingRegionId((prev) => (prev === reg.id ? null : prev));
+                            }, 220);
+                            const chosenSound =
+                              haptic.minimalistClickVariant &&
+                              haptic.minimalistClickVariant !== 'none'
+                                ? haptic.minimalistClickVariant
+                                : regHaptic?.soundId;
+                            if (chosenSound) {
+                              hapticAudio.triggerMinimalistLowClick(
+                                chosenSound,
+                                Math.max(0.35, haptic.intensity / 100)
+                              );
+                              pulseInteraction(0.95);
+                            } else {
+                              triggerPreviewFeedback(2);
+                            }
+                          }}
+                          style={{
+                            left: `${reg.xPct}%`,
+                            top: `${reg.yPct}%`,
+                            width: `${reg.wPct}%`,
+                            height: `${reg.hPct}%`,
+                            borderColor: isFlashing
+                              ? 'rgba(125, 249, 255, 0.95)'
+                              : isHovered
+                                ? 'rgba(103, 232, 249, 0.72)'
+                                : 'transparent',
+                            backgroundColor: isFlashing
+                              ? 'rgba(56, 224, 240, 0.28)'
+                              : isHovered
+                                ? 'rgba(56, 224, 240, 0.10)'
+                                : 'transparent',
+                            boxShadow: isFlashing
+                              ? '0 0 28px rgba(56, 224, 240, 0.8), inset 0 0 18px rgba(255,255,255,0.45)'
+                              : isHovered
+                                ? '0 0 18px rgba(56, 224, 240, 0.35)'
+                                : undefined,
+                          }}
+                          className="pointer-events-auto absolute rounded-2xl border transition-all duration-150 active:scale-[0.97] cursor-pointer"
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

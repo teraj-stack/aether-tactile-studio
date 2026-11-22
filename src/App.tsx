@@ -13,6 +13,7 @@ import {
   MessageSquareCode,
   Monitor,
   PlugZap,
+  QrCode,
   Server,
 } from 'lucide-react';
 import { StudioProvider, useStudio } from './context/StudioContext';
@@ -37,6 +38,8 @@ import {
 import { GitHubRepoExportModal } from './components/GitHubRepoExportModal';
 import { ExternalPluginsModal } from './components/ExternalPluginsHub';
 import { LocalhostPresentationModal } from './components/LocalhostPresentationModal';
+import { MobileQrHapticsModal } from './components/MobileQrHapticsModal';
+import { MobileHapticsPadView } from './components/MobileHapticsPadView';
 import { hapticAudio } from './lib/hapticAudioEngine';
 import { hasTactileCatalogDrag } from './lib/tactileUiCatalog';
 import {
@@ -74,8 +77,29 @@ const StudioShell: React.FC = () => {
     workingFrontendImage,
   } = useStudio();
 
-  // First section of the application is now the Start Page ('start')
-  const [activeTab, setActiveTab] = useState<StudioTab>('start');
+  // Read initial tab / mobile haptics pad mode from URL query params (for QR code scans)
+  const initialUrlParams =
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const initialTabParam = initialUrlParams?.get('tab') as StudioTab | null;
+  const allowedTabs: StudioTab[] = [
+    'start',
+    'dashboard',
+    'screens',
+    'haptics',
+    'ui-library',
+    'synth',
+    'prompts',
+    'gemini',
+  ];
+
+  // First section of the application is now the Start Page ('start') unless overridden by ?tab=
+  const [activeTab, setActiveTab] = useState<StudioTab>(
+    initialTabParam && allowedTabs.includes(initialTabParam) ? initialTabParam : 'start'
+  );
+  const [mobilePadMode, setMobilePadMode] = useState<boolean>(
+    initialUrlParams?.get('mobileTest') === '1'
+  );
+  const [mobileQrModalOpen, setMobileQrModalOpen] = useState<boolean>(false);
   const [screensSection, setScreensSection] = useState<ScreenHubSection>('all');
   const [screensFocusedId, setScreensFocusedId] = useState<string | null>(null);
 
@@ -138,6 +162,23 @@ const StudioShell: React.FC = () => {
     workbenchLayoutMode === 'composer-only';
 
   const activePluginsCount = externalPlugins.filter((p) => p.enabled).length;
+
+  if (mobilePadMode) {
+    return (
+      <MobileHapticsPadView
+        onExitToStudio={() => {
+          setMobilePadMode(false);
+          setActiveTab('haptics');
+          if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('mobileTest');
+            url.searchParams.set('tab', 'haptics');
+            window.history.replaceState({}, '', url.toString());
+          }
+        }}
+      />
+    );
+  }
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${bgGradientClass}`}>
@@ -308,6 +349,18 @@ const StudioShell: React.FC = () => {
               />
               <span>Zero-Limit</span>
             </label>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMobileQrModalOpen(true);
+                hapticAudio.triggerMinimalistLowClick('crystal-glass-tap-9ms', 0.6);
+              }}
+              className="min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-emerald-400 dark:to-teal-400 text-white dark:text-emerald-950 hover:opacity-95 inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 shadow-sm"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              <span>Kod QR (Telefon)</span>
+            </button>
 
             <button
               type="button"
@@ -576,6 +629,12 @@ const StudioShell: React.FC = () => {
           </button>
         </div>
       </footer>
+
+      {/* Mobile QR Code Haptics Testing Modal */}
+      <MobileQrHapticsModal
+        open={mobileQrModalOpen}
+        onClose={() => setMobileQrModalOpen(false)}
+      />
 
       {/* Localhost Frontend Presentation Host & Server Builder Modal */}
       <LocalhostPresentationModal />

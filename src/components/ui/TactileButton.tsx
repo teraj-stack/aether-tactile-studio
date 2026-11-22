@@ -72,6 +72,7 @@ export const TactileButton: React.FC<TactileButtonProps> = ({
   });
 
   const btnRef = useRef<HTMLButtonElement | null>(null);
+  const lastHoverTickRef = useRef<number>(0);
 
   const isGroupUnified = selectedGroups.includes(groupId);
   const groupCfg = groupConfigs[groupId];
@@ -121,6 +122,12 @@ export const TactileButton: React.FC<TactileButtonProps> = ({
     if (disabled) return;
     setIsHovered(true);
     updateLocalCoords(e);
+    const now = performance.now();
+    if (haptic.enabled && now - lastHoverTickRef.current > 95) {
+      lastHoverTickRef.current = now;
+      const hoverGain = Math.max(0.08, Math.min(0.22, (haptic.intensity / 100) * 0.22));
+      hapticAudio.triggerMinimalistLowClick('satin-tick-4ms', hoverGain);
+    }
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
@@ -478,6 +485,21 @@ export const TactileButton: React.FC<TactileButtonProps> = ({
             className="pointer-events-none absolute top-0 left-5 right-5 h-[1.5px] opacity-75"
           />
         )}
+
+      {/* Enhanced Key-Edge Luminous Highlight & Press Wave */}
+      <span
+        aria-hidden="true"
+        style={{
+          opacity: isPressed ? 1 : isHovered ? 0.85 : 0,
+          background: `radial-gradient(circle 130px at ${pointerCoords.spotX}% ${pointerCoords.spotY}%, ${effectiveGlowColor}${isPressed ? '70' : '38'} 0%, transparent 72%)`,
+          boxShadow: isPressed
+            ? `inset 0 0 0 1.5px ${effectiveGlowColor}, 0 0 22px ${effectiveGlowColor}55`
+            : isHovered
+              ? `inset 0 0 0 1px ${effectiveGlowColor}88`
+              : 'none',
+        }}
+        className="pointer-events-none absolute inset-0 rounded-[inherit] transition-all duration-150"
+      />
 
       <span className="relative z-10 flex items-center justify-between gap-3 w-full">
         <span className="flex items-center gap-3 min-w-0">

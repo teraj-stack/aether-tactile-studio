@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 import { auth, googleAuthProvider } from '../lib/firebase';
+import { BM_CLINIC_PROKTOLOGIA_SCREEN } from '../lib/bmClinicProktologiaScreen';
 import { hapticAudio } from '../lib/hapticAudioEngine';
 import {
   ActiveModifiedElementState,
@@ -620,7 +621,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [localDiskConfig, setLocalDiskConfig] =
     useState<LocalDiskWorkspaceConfig>(DEFAULT_LOCAL_DISK_CONFIG);
   const [workingFrontendImage, setWorkingFrontendImage] =
-    useState<WorkingFrontendImageState | null>(null);
+    useState<WorkingFrontendImageState | null>(BM_CLINIC_PROKTOLOGIA_SCREEN);
   const [composedElementShades, setComposedElementShades] = useState<
     Record<string, ElementShadeId>
   >({});
