@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>Aether 3D — Sfera Haptyczna 3D (Miękkość → Lepkość)</title>
+  <title>Aether 3D — Sfera Haptyczna 3D (Miękkość · Gładkość · Lepkość)</title>
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
     input, textarea, select { -webkit-user-select: auto; user-select: auto; }
@@ -15,91 +15,105 @@
       color: #ecfeff; display: flex; flex-direction: column; align-items: center;
       overscroll-behavior: none;
     }
-    .wrap { width: 100%; max-width: 560px; padding: max(16px, env(safe-area-inset-top)) 16px 28px; display: flex; flex-direction: column; gap: 13px; }
+    .wrap { width: 100%; max-width: 560px; padding: max(14px, env(safe-area-inset-top)) 16px 28px; display: flex; flex-direction: column; gap: 12px; }
     .hdr { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .tag { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: #38e0f0; font-weight: 700; }
-    h1 { margin: 2px 0 0; font-size: 19px; }
+    h1 { margin: 2px 0 0; font-size: 18px; }
     a.back { color: #a5f3fc; font-size: 12px; font-weight: 600; text-decoration: none; padding: 7px 11px; border-radius: 12px; border: 1px solid rgba(103,232,249,0.28); background: rgba(255,255,255,0.06); }
-    #unlockBtn { width: 100%; padding: 13px; border-radius: 16px; border: none; font-weight: 700; font-size: 14px; color: #fff; background: linear-gradient(135deg, #06b6d4, #6366f1); cursor: pointer; }
+    #unlockBtn { width: 100%; padding: 12px; border-radius: 16px; border: none; font-weight: 700; font-size: 13.5px; color: #fff; background: linear-gradient(135deg, #06b6d4, #6366f1); cursor: pointer; }
     .stage {
       position: relative; border-radius: 28px; overflow: hidden;
       border: 1px solid rgba(103,232,249,0.3); background: rgba(3,12,16,0.82);
       box-shadow: 0 24px 60px rgba(0,0,0,0.55); touch-action: none;
     }
-    canvas { width: 100%; height: min(50vh, 390px); display: block; cursor: grab; touch-action: none; }
+    canvas { width: 100%; height: min(46vh, 360px); display: block; cursor: grab; touch-action: none; }
     canvas:active { cursor: grabbing; }
     .visc-badge {
-      position: absolute; top: 12px; left: 12px; right: 12px;
+      position: absolute; top: 10px; left: 10px; right: 10px;
       display: flex; justify-content: space-between; align-items: center; gap: 8px;
-      padding: 7px 12px; border-radius: 12px; background: rgba(4, 19, 22, 0.72);
-      border: 1px solid rgba(103,232,249,0.25); backdrop-filter: blur(10px);
+      padding: 7px 12px; border-radius: 12px; background: rgba(4, 19, 22, 0.74);
+      border: 1px solid rgba(103,232,249,0.26); backdrop-filter: blur(10px);
       font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; pointer-events: none;
     }
-    .visc-meter {
-      display: inline-flex; align-items: center; gap: 6px; color: #a5f3fc;
-    }
-    .visc-bar {
-      width: 58px; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.12); overflow: hidden;
-    }
-    .visc-fill {
-      height: 100%; border-radius: 999px; background: linear-gradient(90deg, #38e0f0, #a78bfa, #f472b6);
-      transition: width 0.12s ease;
-    }
-    .slider-card {
+    .visc-meter { display: inline-flex; align-items: center; gap: 6px; color: #a5f3fc; }
+    .visc-bar { width: 58px; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.12); overflow: hidden; }
+    .visc-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #38e0f0, #a78bfa, #f472b6); transition: width 0.12s ease; }
+    .sliders-card {
       padding: 12px 14px; border-radius: 18px; background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(103,232,249,0.24); display: flex; flex-direction: column; gap: 8px;
+      border: 1px solid rgba(103,232,249,0.24); display: flex; flex-direction: column; gap: 10px;
     }
-    .slider-top {
-      display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700;
+    .sl-row { display: flex; flex-direction: column; gap: 4px; }
+    .sl-top { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; font-weight: 700; }
+    .sl-top .val { font-family: ui-monospace, monospace; color: #38e0f0; font-size: 11px; }
+    input[type="range"] { width: 100%; accent-color: #a78bfa; height: 5px; }
+    .formula-line {
+      font-size: 10.5px; color: rgba(207,250,254,0.72); padding-top: 6px;
+      border-top: 1px solid rgba(255,255,255,0.09); display: flex; justify-content: space-between;
     }
-    .slider-top span.val { font-family: ui-monospace, monospace; color: #38e0f0; font-size: 11.5px; }
-    input[type="range"] { width: 100%; accent-color: #a78bfa; height: 6px; }
-    .slider-hint { font-size: 10.5px; color: rgba(207,250,254,0.68); display: flex; justify-content: space-between; }
-    .hud { padding: 11px 14px; border-radius: 14px; background: rgba(0,0,0,0.35); border: 1px solid rgba(103,232,249,0.22); font-size: 12px; display: flex; justify-content: space-between; gap: 8px; }
-    .mats { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; }
-    .chip { padding: 10px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.06); color: #fff; text-align: left; cursor: pointer; }
+    .hud { padding: 10px 13px; border-radius: 14px; background: rgba(0,0,0,0.35); border: 1px solid rgba(103,232,249,0.22); font-size: 11.5px; display: flex; justify-content: space-between; gap: 8px; }
+    .mats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .chip { padding: 9px 10px; border-radius: 13px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.06); color: #fff; text-align: left; cursor: pointer; }
     .chip.active { background: rgba(56,224,240,0.2); border-color: #38e0f0; }
-    .chip strong { display: block; font-size: 12px; }
-    .chip span { font-size: 10px; color: rgba(207,250,254,0.7); }
+    .chip strong { display: block; font-size: 11.5px; }
+    .chip span { font-size: 9.5px; color: rgba(207,250,254,0.72); }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="hdr">
       <div>
-        <div class="tag">Model 3D #2 · Fizyka Miękkości i Lepkości</div>
+        <div class="tag">Model 3D #2 · Trybologia Powierzchni</div>
         <h1>Sfera Haptyczna 3D</h1>
       </div>
       <a class="back" href="./">Całe Studio</a>
     </div>
 
-    <button id="unlockBtn" type="button">Dotknij raz, aby włączyć dźwięk &lt;160 Hz i fizykę lepkości</button>
+    <button id="unlockBtn" type="button">Dotknij raz, aby włączyć dźwięk &lt;160 Hz i symulację lepkości</button>
 
     <div class="stage">
       <div class="visc-badge">
-        <span id="matBadge">Szkło błyszczące</span>
+        <span id="matBadge">Szkło gładkie</span>
         <span class="visc-meter">
-          <span id="viscBadge">Lepkość 10%</span>
-          <span class="visc-bar"><span class="visc-fill" id="viscFill" style="width:10%;"></span></span>
+          <span id="viscBadge">Lepkość 13%</span>
+          <span class="visc-bar"><span class="visc-fill" id="viscFill" style="width:13%;"></span></span>
         </span>
       </div>
-      <canvas id="c" width="560" height="440"></canvas>
+      <canvas id="c" width="560" height="420"></canvas>
     </div>
 
-    <div class="slider-card">
-      <div class="slider-top">
-        <span>Miękkość materiału → Auto Lepkość</span>
-        <span class="val" id="softnessVal">Miękkość 12% · Lepkość 10%</span>
+    <div class="sliders-card">
+      <div class="sl-row">
+        <div class="sl-top">
+          <span>1. Miękkość materiału (100 − twardość Shore)</span>
+          <span class="val" id="softnessVal">8%</span>
+        </div>
+        <input type="range" id="softnessSlider" min="0" max="100" value="8" />
       </div>
-      <input type="range" id="softnessSlider" min="0" max="100" value="12" />
-      <div class="slider-hint">
-        <span>Twarde / śliskie (poślizg)</span>
-        <span>Miękkie / żelowe (ciągnie się i przywiera)</span>
+
+      <div class="sl-row">
+        <div class="sl-top">
+          <span>2. Szorstkość / Matowość (roughness3D — odwrotność gładkości)</span>
+          <span class="val" id="roughnessVal">6%</span>
+        </div>
+        <input type="range" id="roughnessSlider" min="0" max="100" value="6" />
+      </div>
+
+      <div class="sl-row">
+        <div class="sl-top">
+          <span>3. Tłumienie powrotu (100 − sprzęgło odwrotne)</span>
+          <span class="val" id="clutchVal">36%</span>
+        </div>
+        <input type="range" id="clutchSlider" min="0" max="100" value="36" />
+      </div>
+
+      <div class="formula-line">
+        <span id="dwellLine">Czas docisku (creep): +0%</span>
+        <strong style="color:#f472b6;" id="totalViscLine">Wypadkowa lepkość: 13%</strong>
       </div>
     </div>
 
     <div class="hud">
-      <span id="hudStatus">Przytrzymaj i pociągnij sferę palcem — poczuj opór i odklejenie</span>
+      <span id="hudStatus">Porównaj: Szkło gładkie (13%) vs Szkło matowe (34%) vs Zamsz (78%)</span>
       <span id="angInfo" style="color:#38e0f0;font-family:monospace;flex-shrink:0;">X: 0° · Y: 0°</span>
     </div>
 
@@ -164,8 +178,7 @@
         osc.start(now); sub.start(now); osc.stop(now + dur + 0.004); sub.stop(now + dur + 0.004);
       }
 
-      // Dedicated viscous suction / pull / detach sound (<140 Hz sticky resonance)
-      function playViscousPull(visc, mode) {
+      function playViscousPull(visc, rough, mode) {
         var ac = ensureAudio();
         if (navigator.vibrate) {
           try {
@@ -176,44 +189,45 @@
         if (!ac) return;
         var now = ac.currentTime;
         var osc = ac.createOscillator();
-        osc.type = 'sine';
-        var dur = mode === 'detach' ? (0.045 + visc * 0.075) : (0.025 + visc * 0.04);
+        // Rough/matte surfaces get subtle triangle micro-grain; smooth soft surfaces get pure sine
+        osc.type = rough > 0.3 ? 'triangle' : 'sine';
+        var dur = mode === 'detach' ? (0.045 + visc * 0.075) : (0.022 + visc * 0.038);
         if (mode === 'detach') {
-          // Soft sticky suction pop rising slightly then settling low
           osc.frequency.setValueAtTime(34 + (1 - visc) * 20, now);
-          osc.frequency.exponentialRampToValueAtTime(76 + visc * 42, now + dur * 0.45);
+          osc.frequency.exponentialRampToValueAtTime(74 + visc * 40, now + dur * 0.45);
           osc.frequency.exponentialRampToValueAtTime(28, now + dur);
         } else {
-          // Thick damped viscous drag rumble
-          osc.frequency.setValueAtTime(56 - visc * 20, now);
+          osc.frequency.setValueAtTime(58 - visc * 18 + rough * 18, now);
           osc.frequency.exponentialRampToValueAtTime(28, now + dur);
         }
         var lp = ac.createBiquadFilter();
         lp.type = 'lowpass';
-        lp.frequency.setValueAtTime(145 - visc * 55, now);
+        lp.frequency.setValueAtTime(145 - visc * 45 + rough * 20, now);
         var g = ac.createGain();
         g.gain.setValueAtTime(0.0001, now);
-        g.gain.linearRampToValueAtTime(0.28 + visc * 0.28, now + 0.006);
+        g.gain.linearRampToValueAtTime(0.24 + visc * 0.30, now + 0.005);
         g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
         osc.connect(lp); lp.connect(g); g.connect(ac.destination);
         osc.start(now); osc.stop(now + dur + 0.005);
       }
 
+      // Exact physical parameters synced with MATERIAL_PROFILES in src/types/studio.ts
       var MATS = [
-        { id: 'metal', label: 'Metal CNC', sub: 'Twardy · 4%', sound: 'leica-shutter-snap-6ms', color: '#2dd4bf', softness: 4 },
-        { id: 'shiny', label: 'Szkło', sub: 'Śliskie · 12%', sound: 'crystal-glass-tap-9ms', color: '#38e0f0', softness: 12 },
-        { id: 'frost', label: 'Mat szkło', sub: 'Jedwab · 36%', sound: 'velvet-clinic-chime-15ms', color: '#818cf8', softness: 36 },
-        { id: 'suede', label: 'Zamsz', sub: 'Miękki · 74%', sound: 'deep-sub-pulse-16ms', color: '#a78bfa', softness: 74 },
-        { id: 'gel', label: 'Żel / Silikon', sub: 'Lepki · 94%', sound: 'vacuum-seal-14ms', color: '#f472b6', softness: 94 }
+        { id: 'shiny', label: 'Szkło gładkie', sub: 'Gładkie · Lepk. 13%', sound: 'crystal-glass-tap-9ms', color: '#38e0f0', softness: 8, roughness: 6, clutchDamp: 36 },
+        { id: 'frost', label: 'Szkło matowe', sub: 'Matowe · Lepk. 34%', sound: 'velvet-clinic-chime-15ms', color: '#818cf8', softness: 26, roughness: 34, clutchDamp: 52 },
+        { id: 'metal', label: 'Metal CNC', sub: 'Twardy · Lepk. 14%', sound: 'leica-shutter-snap-6ms', color: '#2dd4bf', softness: 4, roughness: 28, clutchDamp: 14 },
+        { id: 'abs', label: 'Plastik ABS', sub: 'Polimer · Lepk. 32%', sound: 'satin-tick-4ms', color: '#fbbf24', softness: 32, roughness: 24, clutchDamp: 44 },
+        { id: 'suede', label: 'Zamsz', sub: 'Włókno · Lepk. 78%', sound: 'deep-sub-pulse-16ms', color: '#a78bfa', softness: 72, roughness: 88, clutchDamp: 74 },
+        { id: 'gel', label: 'Żel / Silikon', sub: 'Lepki · Lepk. 88%', sound: 'vacuum-seal-14ms', color: '#f472b6', softness: 94, roughness: 68, clutchDamp: 90 }
       ];
 
-      var mat = MATS[1];
-      var softness = 12; // 0..100
-      var viscosity = 0.10; // 0..1 computed automatically from softness
+      var mat = MATS[0];
+      var softness = 8, roughness = 6, clutchDamp = 36;
+      var baseViscosity = 0.13, dwellBoost = 0, viscosity = 0.13;
+      var holdStartMs = 0;
 
       var rotX = 0.35, rotY = 0.6, velX = 0.002, velY = 0.007;
       var drag = false, lx = 0, ly = 0, dist = 0, pulse = 0, zc = 0;
-      // Viscous finger pull vector in canvas coordinates relative to sphere center
       var pullX = 0, pullY = 0, targetPullX = 0, targetPullY = 0;
       var pointerCanvasX = 0, pointerCanvasY = 0, hasPointer = false;
       var stretchMag = 0;
@@ -221,22 +235,33 @@
       var canvas = document.getElementById('c'), sctx = canvas.getContext('2d');
       var angInfo = document.getElementById('angInfo');
       var softnessSlider = document.getElementById('softnessSlider');
+      var roughnessSlider = document.getElementById('roughnessSlider');
+      var clutchSlider = document.getElementById('clutchSlider');
       var softnessVal = document.getElementById('softnessVal');
+      var roughnessVal = document.getElementById('roughnessVal');
+      var clutchVal = document.getElementById('clutchVal');
       var viscBadge = document.getElementById('viscBadge');
       var viscFill = document.getElementById('viscFill');
       var matBadge = document.getElementById('matBadge');
+      var totalViscLine = document.getElementById('totalViscLine');
+      var dwellLine = document.getElementById('dwellLine');
       var hudStatus = document.getElementById('hudStatus');
 
-      function updateSoftness(val) {
-        softness = Math.max(0, Math.min(100, Math.round(val)));
-        // Automatically couple viscosity nonlinearly to material softness
-        viscosity = Math.pow(softness / 100, 1.08);
-        var viscPct = Math.round(viscosity * 100);
+      function recomputeViscosity() {
+        baseViscosity = Math.max(0, Math.min(1, 0.45 * (softness / 100) + 0.35 * (roughness / 100) + 0.20 * (clutchDamp / 100)));
+        viscosity = Math.min(1, baseViscosity + dwellBoost);
+        var vp = Math.round(viscosity * 100);
         softnessSlider.value = String(softness);
-        softnessVal.textContent = 'Miękkość ' + softness + '% · Lepkość ' + viscPct + '%';
-        viscBadge.textContent = 'Lepkość ' + viscPct + '%';
-        viscFill.style.width = viscPct + '%';
-        matBadge.textContent = mat.label + (viscPct >= 65 ? ' · Silne przywieranie' : viscPct >= 30 ? ' · Lekki opór' : ' · Gładki poślizg');
+        roughnessSlider.value = String(roughness);
+        clutchSlider.value = String(clutchDamp);
+        softnessVal.textContent = softness + '%';
+        roughnessVal.textContent = roughness + '%';
+        clutchVal.textContent = clutchDamp + '%';
+        viscBadge.textContent = 'Lepkość ' + vp + '%';
+        viscFill.style.width = vp + '%';
+        totalViscLine.textContent = 'Wypadkowa lepkość: ' + vp + '%';
+        dwellLine.textContent = 'Czas docisku (creep): +' + Math.round(dwellBoost * 100) + '%';
+        matBadge.textContent = mat.label + (vp >= 65 ? ' · Silne przywieranie' : vp >= 28 ? ' · Matowe tarcie' : ' · Gładki poślizg');
       }
 
       var PTS = [], phi = Math.PI * (3 - Math.sqrt(5));
@@ -250,13 +275,9 @@
         playClick(mat.sound, 'Sfera 3D gotowa', 8);
       });
 
-      softnessSlider.addEventListener('input', function () {
-        updateSoftness(Number(softnessSlider.value));
-        if (viscosity > 0.55) {
-          playViscousPull(viscosity, 'drag');
-          hudStatus.textContent = 'Zwiększona miękkość → wysoka lepkość (' + Math.round(viscosity * 100) + '%)';
-        }
-      });
+      softnessSlider.addEventListener('input', function () { softness = Number(softnessSlider.value); recomputeViscosity(); });
+      roughnessSlider.addEventListener('input', function () { roughness = Number(roughnessSlider.value); recomputeViscosity(); });
+      clutchSlider.addEventListener('input', function () { clutchDamp = Number(clutchSlider.value); recomputeViscosity(); });
 
       function renderMats() {
         var box = document.getElementById('mats');
@@ -268,10 +289,14 @@
           b.innerHTML = '<strong>' + m.label + '</strong><span>' + m.sub + '</span>';
           b.addEventListener('pointerdown', function () {
             mat = m;
+            softness = m.softness;
+            roughness = m.roughness;
+            clutchDamp = m.clutchDamp;
+            dwellBoost = 0;
             pulse = 1.1;
-            updateSoftness(m.softness);
+            recomputeViscosity();
             renderMats();
-            if (viscosity > 0.5) playViscousPull(viscosity, 'detach');
+            if (viscosity > 0.35) playViscousPull(viscosity, roughness / 100, 'detach');
             else playClick(m.sound, m.label, 8);
           });
           box.appendChild(b);
@@ -287,19 +312,18 @@
       }
 
       canvas.addEventListener('pointerdown', function (e) {
-        drag = true;
-        hasPointer = true;
+        drag = true; hasPointer = true; holdStartMs = performance.now();
         lx = e.clientX; ly = e.clientY; dist = 0;
         var pt = toCanvasCoords(e.clientX, e.clientY);
         pointerCanvasX = pt.x; pointerCanvasY = pt.y;
-        zc = 0.08 + viscosity * 0.16; // Softer material sinks deeper under finger!
+        zc = 0.06 + (softness / 100) * 0.18;
         pulse = 1.0;
         canvas.setPointerCapture(e.pointerId);
-        if (viscosity > 0.55) {
-          playViscousPull(viscosity, 'drag');
-          hudStatus.textContent = 'Przywarcie do powierzchni · lepkość ' + Math.round(viscosity * 100) + '%';
+        if (viscosity > 0.30) {
+          playViscousPull(viscosity, roughness / 100, 'drag');
+          hudStatus.textContent = mat.label + ' · lepkość ' + Math.round(viscosity * 100) + '% (szorstkość ' + roughness + '%)';
         } else {
-          playClick(mat.sound, 'Dotyk: ' + mat.label, 8);
+          playClick(mat.sound, 'Gładki dotyk: ' + mat.label, 7);
         }
       });
 
@@ -310,49 +334,47 @@
         var pt = toCanvasCoords(e.clientX, e.clientY);
         pointerCanvasX = pt.x; pointerCanvasY = pt.y;
 
-        // Higher viscosity = heavier rotational resistance (sticks to finger instead of spinning freely!)
-        var rotSensitivity = 0.013 * (1 - viscosity * 0.72);
+        var rotSensitivity = 0.0135 * (1 - viscosity * 0.72);
         rotY += dx * rotSensitivity;
         rotX += dy * rotSensitivity;
         velY = dx * rotSensitivity * 0.42;
         velX = dy * rotSensitivity * 0.42;
 
-        // Elastic viscous stretch pulls the sphere's surface toward the finger
         var cx = canvas.width / 2, cy = canvas.height / 2;
-        var maxPull = 14 + viscosity * 74;
+        var maxPull = 12 + viscosity * 76;
         var relX = pt.x - cx, relY = pt.y - cy;
         var relLen = Math.hypot(relX, relY) || 1;
-        var pullStrength = Math.min(maxPull, relLen * (0.12 + viscosity * 0.52));
-        targetPullX = (relX / relLen) * pullStrength * (0.15 + viscosity * 0.95);
-        targetPullY = (relY / relLen) * pullStrength * (0.15 + viscosity * 0.95);
+        var pullStrength = Math.min(maxPull, relLen * (0.10 + viscosity * 0.54));
+        targetPullX = (relX / relLen) * pullStrength * (0.14 + viscosity * 0.95);
+        targetPullY = (relY / relLen) * pullStrength * (0.14 + viscosity * 0.95);
 
         dist += Math.hypot(dx, dy);
-        var tickStep = 38 - viscosity * 14;
-        if (dist > tickStep) {
+        // Matte/rough surfaces tick more frequently (micro-grain friction!)
+        var tickStep = 38 - (roughness / 100) * 16 - viscosity * 8;
+        if (dist > Math.max(12, tickStep)) {
           dist = 0;
-          pulse = Math.min(1.25, pulse + 0.25 + viscosity * 0.25);
-          if (viscosity >= 0.45) {
-            playViscousPull(viscosity, 'drag');
-            hudStatus.textContent = 'Opór lepkości ' + Math.round(viscosity * 100) + '% · rozciąganie menisku';
+          pulse = Math.min(1.25, pulse + 0.22 + viscosity * 0.25);
+          if (viscosity >= 0.28) {
+            playViscousPull(viscosity, roughness / 100, 'drag');
+            hudStatus.textContent = 'Tarcie/lepkość ' + Math.round(viscosity * 100) + '% (matowość ' + roughness + '%)';
           } else {
-            playClick('satin-tick-4ms', 'Obrót 3D (poślizg)', 3, 0.45);
+            playClick('satin-tick-4ms', 'Gładki poślizg 3D', 3, 0.42);
           }
         }
       });
 
       function releaseFinger() {
         if (!drag) return;
-        drag = false;
-        hasPointer = false;
-        zc = 0;
+        drag = false; hasPointer = false; zc = 0;
         var wasStretched = Math.hypot(pullX, pullY);
-        targetPullX = 0;
-        targetPullY = 0;
-        if (viscosity >= 0.35 && wasStretched > 10) {
-          playViscousPull(viscosity, 'detach');
-          hudStatus.textContent = 'Odklejenie od miękkiego materiału · powrót sprężysty';
-          pulse = 1.15;
+        targetPullX = 0; targetPullY = 0;
+        if (viscosity >= 0.25 && wasStretched > 8) {
+          playViscousPull(viscosity, roughness / 100, 'detach');
+          hudStatus.textContent = 'Odklejenie (' + mat.label + ') · powrót tłumiony ' + clutchDamp + '%';
+          pulse = 1.12;
         }
+        dwellBoost = 0;
+        recomputeViscosity();
       }
       canvas.addEventListener('pointerup', releaseFinger);
       canvas.addEventListener('pointercancel', releaseFinger);
@@ -361,28 +383,35 @@
         var w = canvas.width, h = canvas.height, cx = w / 2, cy = h / 2;
         sctx.clearRect(0, 0, w, h);
 
-        // Viscous damping: hard glass coasts smoothly (0.98), soft sticky gel halts almost immediately (0.76)
-        var inertiaDamp = 0.982 - viscosity * 0.22;
+        // Dwell/creep effect: holding finger on soft/matte material progressively increases adhesion (+0..16%)
+        if (drag && baseViscosity > 0.2) {
+          var heldSec = Math.min(2.5, (performance.now() - holdStartMs) / 1000);
+          var nextBoost = (heldSec / 2.5) * 0.16 * (0.4 + softness / 100);
+          if (Math.abs(nextBoost - dwellBoost) > 0.008) {
+            dwellBoost = nextBoost;
+            recomputeViscosity();
+          }
+        }
+
+        var inertiaDamp = 0.984 - viscosity * 0.24;
         if (!drag) {
           rotY += velY;
           rotX += velX;
-          velY = velY * inertiaDamp + (0.005 * (1 - viscosity * 0.78)) * (1 - inertiaDamp);
+          velY = velY * inertiaDamp + (0.005 * (1 - viscosity * 0.8)) * (1 - inertiaDamp);
           velX *= inertiaDamp;
         }
 
-        // Viscous elastic relaxation (slower, gooier return when viscosity is high!)
-        var followRate = drag ? (0.28 - viscosity * 0.14) : (0.22 - viscosity * 0.155);
+        var followRate = drag ? (0.28 - viscosity * 0.14) : (0.24 - (clutchDamp / 100) * 0.17);
         pullX += (targetPullX - pullX) * followRate;
         pullY += (targetPullY - pullY) * followRate;
         stretchMag = Math.hypot(pullX, pullY);
-        pulse *= (0.91 + viscosity * 0.04);
+        pulse *= (0.90 + (clutchDamp / 100) * 0.05);
 
         var sc = Math.min(w, h) * 0.35 * (1 - zc + pulse * 0.06);
         var centerShiftX = cx + pullX * 0.42;
         var centerShiftY = cy + pullY * 0.42;
 
-        // Soft viscous halo & meniscus tether stretching to fingertip
-        if (viscosity > 0.2 && (drag || stretchMag > 4)) {
+        if (viscosity > 0.18 && (drag || stretchMag > 4)) {
           var tetherX = drag ? pointerCanvasX : (cx + pullX * 1.45);
           var tetherY = drag ? pointerCanvasY : (cy + pullY * 1.45);
           var tGrad = sctx.createLinearGradient(centerShiftX, centerShiftY, tetherX, tetherY);
@@ -390,21 +419,20 @@
           tGrad.addColorStop(1, '#f472b6aa');
           sctx.save();
           sctx.beginPath();
-          var neckWidth = Math.max(6, (28 + viscosity * 44) * Math.max(0.25, 1 - stretchMag / 170));
+          var neckWidth = Math.max(5, (24 + viscosity * 46) * Math.max(0.25, 1 - stretchMag / 170));
           sctx.moveTo(centerShiftX, centerShiftY);
           sctx.lineTo(tetherX, tetherY);
           sctx.strokeStyle = tGrad;
           sctx.lineWidth = neckWidth;
           sctx.lineCap = 'round';
-          sctx.globalAlpha = Math.min(0.62, viscosity * 0.75 * Math.min(1, stretchMag / 18 + 0.3));
+          sctx.globalAlpha = Math.min(0.62, viscosity * 0.78 * Math.min(1, stretchMag / 18 + 0.3));
           sctx.stroke();
 
-          // Contact suction ring under fingertip
           if (drag) {
             sctx.beginPath();
-            sctx.arc(tetherX, tetherY, 16 + viscosity * 20, 0, Math.PI * 2);
+            sctx.arc(tetherX, tetherY, 15 + viscosity * 20, 0, Math.PI * 2);
             sctx.fillStyle = mat.color;
-            sctx.globalAlpha = 0.22 + viscosity * 0.22;
+            sctx.globalAlpha = 0.20 + viscosity * 0.24;
             sctx.fill();
             sctx.strokeStyle = '#ffffff';
             sctx.lineWidth = 1.5;
@@ -414,9 +442,8 @@
           sctx.restore();
         }
 
-        // Deformed elliptical glass/gel orb body
         var stretchAngle = Math.atan2(pullY, pullX);
-        var stretchX = 1 + (stretchMag / 160) * (0.25 + viscosity * 0.55);
+        var stretchX = 1 + (stretchMag / 160) * (0.22 + (softness / 100) * 0.58);
         var stretchY = 1 / Math.sqrt(stretchX);
 
         sctx.save();
@@ -425,7 +452,9 @@
         sctx.scale(stretchX, stretchY);
 
         var og = sctx.createRadialGradient(-sc * 0.3, -sc * 0.35, 10, 0, 0, sc * 1.15);
-        og.addColorStop(0, 'rgba(224,242,254,0.46)');
+        // Glossy glass has sharper bright specular highlight; matte/suede has diffused softer sheen
+        var specAlpha = (0.52 - (roughness / 100) * 0.34).toFixed(2);
+        og.addColorStop(0, 'rgba(224,242,254,' + specAlpha + ')');
         og.addColorStop(0.45, mat.color + '55');
         og.addColorStop(1, 'rgba(0,0,0,0)');
         sctx.beginPath();
@@ -440,7 +469,6 @@
         sctx.stroke();
         sctx.restore();
 
-        // 3D vertices with viscous local attraction toward fingertip
         var cX = Math.cos(rotX), sX = Math.sin(rotX), cY = Math.cos(rotY), sY = Math.sin(rotY);
         var proj = PTS.map(function (p) {
           var x1 = p.x * cY - p.z * sY, z1 = p.x * sY + p.z * cY;
@@ -448,18 +476,16 @@
           var persp = 2.6 / (2.6 - z2);
           var sx = centerShiftX + x1 * sc * persp * 0.86;
           var sy = centerShiftY + y2 * sc * persp * 0.86;
-
-          // Pull front-facing vertices elastically toward pointer when soft/viscous
-          if (viscosity > 0.15 && (hasPointer || stretchMag > 2) && z2 > -0.2) {
+          if (viscosity > 0.12 && (hasPointer || stretchMag > 2) && z2 > -0.2) {
             var tx = hasPointer ? pointerCanvasX : (cx + pullX * 1.3);
             var ty = hasPointer ? pointerCanvasY : (cy + pullY * 1.3);
             var dxp = tx - sx, dyp = ty - sy;
             var d = Math.hypot(dxp, dyp);
-            var influence = Math.exp(-d / (70 + viscosity * 85)) * viscosity * 0.58 * Math.max(0, z2 + 0.2);
+            var influence = Math.exp(-d / (70 + viscosity * 85)) * viscosity * 0.60 * Math.max(0, z2 + 0.2);
             sx += dxp * influence;
             sy += dyp * influence;
           }
-          return { sx: sx, sy: sy, z: z2, r: Math.max(1.5, (z2 + 1.35) * (2.2 + viscosity * 0.7)) };
+          return { sx: sx, sy: sy, z: z2, r: Math.max(1.5, (z2 + 1.35) * (2.1 + (roughness / 100) * 0.9)) };
         }).sort(function (a, b) { return a.z - b.z; });
 
         proj.forEach(function (pr) {
@@ -477,7 +503,7 @@
         requestAnimationFrame(draw);
       }
 
-      updateSoftness(mat.softness);
+      recomputeViscosity();
       renderMats();
       draw();
     })();
