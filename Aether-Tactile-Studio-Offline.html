@@ -19,7 +19,8 @@
       --accent: #38e0f0;
       --accent-2: #818cf8;
     }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    input, textarea, select { -webkit-user-select: auto; user-select: auto; }
     html, body {
       margin: 0; padding: 0; min-height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
@@ -421,6 +422,13 @@
 
   <script>
     (function () {
+      document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+      document.addEventListener('selectstart', function (e) { e.preventDefault(); });
+      document.querySelectorAll('canvas').forEach(function (cv) {
+        cv.addEventListener('touchstart', function (e) { e.preventDefault(); }, { passive: false });
+        cv.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+      });
+
       var PROFILES = [
         { id: 'sub-carbon-6ms', name: '01. Karbonowy Mikro-Styk', short: '58→34 Hz · 6 ms', cat: 'Ultra-krótki styk matowy', desc: 'Suchy, punktowy impuls włókna węglowego wygaszany w 6 ms.', hz: 58, drop: 34, ms: 6, wave: 'sine', trans: 0.14, vib: 4, hex: '#38BDF8' },
         { id: 'quartz-detent-8ms', name: '02. Kwarcowy Detent Optyczny', short: '82→46 Hz · 8 ms', cat: 'Czysty impuls kryształu', desc: 'Krótkie kliknięcie precyzyjnej soczewki kwarcowej.', hz: 82, drop: 46, ms: 8, wave: 'sine', trans: 0.18, vib: 5, hex: '#818CF8' },
