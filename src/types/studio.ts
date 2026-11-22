@@ -57,7 +57,8 @@ export type MinimalistLowClickId =
   | 'velvet-clinic-chime-15ms'
   | 'calacatta-marble-tap-8ms'
   | 'liquid-gold-drop-11ms'
-  | 'deep-sub-pulse-16ms';
+  | 'deep-sub-pulse-16ms'
+  | 'hi-fi-steel-detent-5ms';
 
 export interface MinimalistLowClickSpec {
   id: MinimalistLowClickId;
@@ -605,6 +606,23 @@ export const MINIMALIST_LOW_CLICK_VARIANTS: MinimalistLowClickSpec[] = [
     recommendedMaterial: 'suede',
     accentHex: '#10B981',
     codeSnippet: 'hapticAudio.triggerMinimalistLowClick("deep-sub-pulse-16ms") // 52→28 Hz · 16 ms',
+  },
+  {
+    id: 'hi-fi-steel-detent-5ms',
+    namePl: '15. Stalowy Przycisk Hi-Fi Audio (Heavy Click)',
+    shortLabelPl: 'Stal Hi-Fi 86 Hz · 5 ms',
+    categoryPl: 'High-End Audio / Duży opór',
+    descriptionPl:
+      'Płaski przycisk ze szczotkowanej stali o krótkim skoku i dużym progu siły nacisku — wyraźny, zwarty klik korpusu 86→36 Hz (5 ms) jak w sprzęcie audio klasy Hi-End.',
+    fundamentalHz: 86,
+    pitchDropHz: 36,
+    durationMs: 5,
+    waveform: 'triangle',
+    microTransientLevel: 0.38,
+    vibratePulseMs: 11,
+    recommendedMaterial: 'matte-metal',
+    accentHex: '#CBD5E1',
+    codeSnippet: 'hapticAudio.triggerMinimalistLowClick("hi-fi-steel-detent-5ms") // 86→36 Hz · 5 ms',
   },
 ];
 

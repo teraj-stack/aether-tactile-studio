@@ -56,6 +56,92 @@
     .chip.active { background: rgba(56,224,240,0.2); border-color: #38e0f0; }
     .chip strong { display: block; font-size: 11.5px; }
     .chip span { font-size: 9.5px; color: rgba(207,250,254,0.72); }
+
+    /* High-End Hi-Fi Audio Flat Brushed Steel Buttons (minimal travel, heavy actuation) */
+    .mats, .presets {
+      background: linear-gradient(180deg, #0a0d11 0%, #14181f 100%);
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(203, 213, 225, 0.16);
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.85), 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    .chip {
+      position: relative;
+      overflow: hidden;
+      padding: 8px 10px 9px !important;
+      border-radius: 5px !important;
+      border: 1px solid rgba(226, 232, 240, 0.24) !important;
+      border-bottom-color: rgba(15, 23, 42, 0.92) !important;
+      background:
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 3px),
+        linear-gradient(180deg, #525b68 0%, #373e48 16%, #262c34 82%, #191d23 100%) !important;
+      color: #f1f5f9 !important;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.34),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.72),
+        0 2px 2px rgba(0, 0, 0, 0.82) !important;
+      transition: transform 0.06s ease, box-shadow 0.08s ease, border-color 0.12s ease !important;
+      touch-action: manipulation;
+    }
+    .chip::before {
+      content: '';
+      position: absolute;
+      top: 5px;
+      right: 7px;
+      width: 14px;
+      height: 2.5px;
+      border-radius: 1px;
+      background: rgba(15, 23, 42, 0.85);
+      box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.9);
+      transition: background 0.12s ease, box-shadow 0.12s ease;
+    }
+    .chip.active::before {
+      background: #38e0f0;
+      box-shadow: 0 0 8px rgba(56, 224, 240, 0.95), 0 0 2px #ffffff;
+    }
+    .chip::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      height: 2px;
+      width: 0%;
+      background: linear-gradient(90deg, #94a3b8, #e2e8f0, #38e0f0);
+      transition: width 0.095s linear;
+    }
+    .chip.pressing {
+      transform: translateY(0.8px) scale(0.994) !important;
+      box-shadow:
+        inset 0 1.5px 3px rgba(0, 0, 0, 0.78),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        0 0.5px 1px rgba(0, 0, 0, 0.9) !important;
+    }
+    .chip.pressing::after {
+      width: 100%;
+    }
+    .chip.engaged {
+      transform: translateY(1.2px) scale(0.992) !important;
+      border-color: rgba(226, 232, 240, 0.52) !important;
+    }
+    .chip.active {
+      border-color: rgba(148, 163, 184, 0.55) !important;
+      background:
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 3px),
+        linear-gradient(180deg, #5d6776 0%, #3d4551 18%, #2a313a 84%, #1c2128 100%) !important;
+    }
+    .chip strong {
+      font-size: 11px !important;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #f8fafc !important;
+      padding-right: 18px;
+    }
+    .chip span {
+      font-size: 9.5px !important;
+      color: #cbd5e1 !important;
+      opacity: 0.78;
+    }
+
   </style>
 </head>
 <body>
@@ -279,6 +365,84 @@
       roughnessSlider.addEventListener('input', function () { roughness = Number(roughnessSlider.value); recomputeViscosity(); });
       clutchSlider.addEventListener('input', function () { clutchDamp = Number(clutchSlider.value); recomputeViscosity(); });
 
+
+      // High-End Hi-Fi Brushed Steel Heavy-Force Click Synthesizer (minimal travel, 95ms break-over force)
+      function playHiFiSteelClick(stage, label) {
+        var ac = ensureAudio();
+        if (navigator.vibrate) {
+          try {
+            if (stage === 'preload') navigator.vibrate(2);
+            else if (stage === 'actuate') navigator.vibrate([11, 10, 4]);
+            else navigator.vibrate(3);
+          } catch (e) {}
+        }
+        if (stage === 'actuate') {
+          var hud = document.getElementById('hudStatus') || document.getElementById('telemetryText');
+          if (hud) hud.textContent = 'STAL HI-FI (Heavy Click): ' + label + ' · 86→36 Hz · 5 ms';
+        }
+        if (!ac) return;
+        var now = ac.currentTime;
+        if (stage === 'preload') {
+          var po = ac.createOscillator(); po.type = 'triangle';
+          po.frequency.setValueAtTime(140, now); po.frequency.exponentialRampToValueAtTime(92, now + 0.004);
+          var pg = ac.createGain();
+          pg.gain.setValueAtTime(0.055, now); pg.gain.exponentialRampToValueAtTime(0.0001, now + 0.0045);
+          po.connect(pg); pg.connect(ac.destination); po.start(now); po.stop(now + 0.005);
+          return;
+        }
+        // Heavy steel chassis break-over click (86->36 Hz 5ms body + sharp machined steel snap)
+        var body = ac.createOscillator(); body.type = 'triangle';
+        body.frequency.setValueAtTime(86, now);
+        body.frequency.exponentialRampToValueAtTime(36, now + 0.009);
+        var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(154, now); lp.Q.setValueAtTime(1.1, now);
+        var bg = ac.createGain();
+        bg.gain.setValueAtTime(0.0001, now);
+        bg.gain.linearRampToValueAtTime(0.56, now + 0.0007);
+        bg.gain.exponentialRampToValueAtTime(0.0001, now + 0.011);
+        body.connect(lp); lp.connect(bg); bg.connect(ac.destination);
+        body.start(now); body.stop(now + 0.013);
+
+        // High-precision stainless steel microswitch break transient
+        var snap = ac.createOscillator(); snap.type = 'triangle';
+        snap.frequency.setValueAtTime(760, now);
+        snap.frequency.exponentialRampToValueAtTime(165, now + 0.0032);
+        var sg = ac.createGain();
+        sg.gain.setValueAtTime(0.32, now);
+        sg.gain.exponentialRampToValueAtTime(0.0001, now + 0.0036);
+        snap.connect(sg); sg.connect(ac.destination);
+        snap.start(now); snap.stop(now + 0.0045);
+      }
+
+      function attachHeavySteelButton(btn, label, onActuate) {
+        var timer = null;
+        var actuated = false;
+        btn.addEventListener('pointerdown', function (e) {
+          e.preventDefault();
+          actuated = false;
+          btn.classList.add('pressing');
+          playHiFiSteelClick('preload', label);
+          if (btn.setPointerCapture) { try { btn.setPointerCapture(e.pointerId); } catch (err) {} }
+          timer = setTimeout(function () {
+            actuated = true;
+            btn.classList.add('engaged');
+            playHiFiSteelClick('actuate', label);
+            onActuate();
+            setTimeout(function () { btn.classList.remove('engaged'); }, 140);
+          }, 95);
+        });
+        function cancelPress() {
+          if (timer) { clearTimeout(timer); timer = null; }
+          btn.classList.remove('pressing');
+          if (!actuated) {
+            var hud = document.getElementById('hudStatus') || document.getElementById('telemetryText');
+            if (hud) hud.textContent = 'Przycisk stalowy Hi-Fi: dociśnij mocniej (~0,1 s), aby przełamać zapadkę';
+          }
+        }
+        btn.addEventListener('pointerup', cancelPress);
+        btn.addEventListener('pointercancel', cancelPress);
+        btn.addEventListener('pointerleave', cancelPress);
+      }
+
       function renderMats() {
         var box = document.getElementById('mats');
         box.innerHTML = '';
@@ -287,7 +451,7 @@
           b.type = 'button';
           b.className = 'chip' + (mat.id === m.id ? ' active' : '');
           b.innerHTML = '<strong>' + m.label + '</strong><span>' + m.sub + '</span>';
-          b.addEventListener('pointerdown', function () {
+          attachHeavySteelButton(b, m.label, function () {
             mat = m;
             softness = m.softness;
             roughness = m.roughness;
@@ -296,8 +460,6 @@
             pulse = 1.1;
             recomputeViscosity();
             renderMats();
-            if (viscosity > 0.35) playViscousPull(viscosity, roughness / 100, 'detach');
-            else playClick(m.sound, m.label, 8);
           });
           box.appendChild(b);
         });

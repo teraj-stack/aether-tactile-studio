@@ -1,0 +1,157 @@
+{
+  "library": "Aether Tactile Studio — Zoptymalizowana Biblioteka Dźwięków (<160 Hz)",
+  "savedAt": "2026-11-22T15:32:00+01:00",
+  "count": 15,
+  "profiles": [
+    {
+      "id": "sub-carbon-6ms",
+      "name": "01. Karbonowy Mikro-Styk",
+      "hz": 58,
+      "dropHz": 34,
+      "durationMs": 6,
+      "waveform": "sine",
+      "microTransient": 0.14,
+      "vibrateMs": 4
+    },
+    {
+      "id": "quartz-detent-8ms",
+      "name": "02. Kwarcowy Detent Optyczny",
+      "hz": 82,
+      "dropHz": 46,
+      "durationMs": 8,
+      "waveform": "sine",
+      "microTransient": 0.18,
+      "vibrateMs": 5
+    },
+    {
+      "id": "monolith-thud-12ms",
+      "name": "03. Monolityczny Sub-Impuls",
+      "hz": 46,
+      "dropHz": 28,
+      "durationMs": 12,
+      "waveform": "sine",
+      "microTransient": 0.06,
+      "vibrateMs": 8
+    },
+    {
+      "id": "ceramic-pip-5ms",
+      "name": "04. Ceramiczna Zapadka Punktowa",
+      "hz": 96,
+      "dropHz": 52,
+      "durationMs": 5,
+      "waveform": "triangle",
+      "microTransient": 0.22,
+      "vibrateMs": 4
+    },
+    {
+      "id": "satin-tick-4ms",
+      "name": "05. Satynowy Suchy Mikro-Tik",
+      "hz": 112,
+      "dropHz": 64,
+      "durationMs": 4,
+      "waveform": "triangle",
+      "microTransient": 0.24,
+      "vibrateMs": 3
+    },
+    {
+      "id": "anodized-relay-9ms",
+      "name": "06. Anodowany Mikro-Przekaźnik",
+      "hz": 68,
+      "dropHz": 38,
+      "durationMs": 9,
+      "waveform": "triangle",
+      "microTransient": 0.19,
+      "vibrateMs": 6
+    },
+    {
+      "id": "vacuum-seal-14ms",
+      "name": "07. Próżniowe Domknięcie Tafli",
+      "hz": 42,
+      "dropHz": 26,
+      "durationMs": 14,
+      "waveform": "sine",
+      "microTransient": 0.05,
+      "vibrateMs": 9
+    },
+    {
+      "id": "titanium-whisper-7ms",
+      "name": "08. Tytanowy Cichy Klik Nocny",
+      "hz": 74,
+      "dropHz": 41,
+      "durationMs": 7,
+      "waveform": "sine",
+      "microTransient": 0.11,
+      "vibrateMs": 5
+    },
+    {
+      "id": "crystal-glass-tap-9ms",
+      "name": "09. Kryształowy Impuls Szkła (BM Clinic)",
+      "hz": 108,
+      "dropHz": 64,
+      "durationMs": 9,
+      "waveform": "sine",
+      "microTransient": 0.28,
+      "vibrateMs": 6
+    },
+    {
+      "id": "leica-shutter-snap-6ms",
+      "name": "10. Migawka Mechaniczna Leica (Precision Snap)",
+      "hz": 94,
+      "dropHz": 42,
+      "durationMs": 6,
+      "waveform": "triangle",
+      "microTransient": 0.34,
+      "vibrateMs": 7
+    },
+    {
+      "id": "velvet-clinic-chime-15ms",
+      "name": "11. Aksamitny Rezonans Kliniczny (Spokój)",
+      "hz": 64,
+      "dropHz": 46,
+      "durationMs": 15,
+      "waveform": "sine",
+      "microTransient": 0.08,
+      "vibrateMs": 8
+    },
+    {
+      "id": "calacatta-marble-tap-8ms",
+      "name": "12. Marmur Calacatta — Stuknięcie Kamienia",
+      "hz": 82,
+      "dropHz": 38,
+      "durationMs": 8,
+      "waveform": "triangle",
+      "microTransient": 0.22,
+      "vibrateMs": 6
+    },
+    {
+      "id": "liquid-gold-drop-11ms",
+      "name": "13. Złota Kropla Rezonansowa (Liquid Gold)",
+      "hz": 96,
+      "dropHz": 54,
+      "durationMs": 11,
+      "waveform": "sine",
+      "microTransient": 0.19,
+      "vibrateMs": 7
+    },
+    {
+      "id": "deep-sub-pulse-16ms",
+      "name": "14. Głęboki Impuls Sub-Bass 52 Hz (Haptic Thump)",
+      "hz": 52,
+      "dropHz": 28,
+      "durationMs": 16,
+      "waveform": "sine",
+      "microTransient": 0.06,
+      "vibrateMs": 12
+    },
+    {
+      "id": "hi-fi-steel-detent-5ms",
+      "name": "15. Stalowy Przycisk Hi-Fi Audio (Heavy Click)",
+      "hz": 86,
+      "dropHz": 36,
+      "durationMs": 5,
+      "waveform": "triangle",
+      "microTransient": 0.38,
+      "vibrateMs": 11
+    }
+  ]
+}
