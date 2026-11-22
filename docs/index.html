@@ -251,91 +251,93 @@
     .footer-note { margin-top: 16px; text-align: center; font-size: 11px; color: var(--muted); }
     .hidden-input { display: none; }
 
-    /* High-End Hi-Fi Audio Flat Brushed Steel Buttons (minimal travel, heavy actuation) */
+    /* High-End Hi-Fi Audio Ultra-Flat Flush Brushed Steel Buttons (0.3mm micro-travel, heavy actuation) */
     .mats, .presets {
-      background: linear-gradient(180deg, #0a0d11 0%, #14181f 100%);
-      padding: 8px;
-      border-radius: 12px;
-      border: 1px solid rgba(203, 213, 225, 0.16);
-      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.85), 0 1px 0 rgba(255, 255, 255, 0.06);
+      background: linear-gradient(180deg, #0b0e12 0%, #141920 100%);
+      padding: 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(203, 213, 225, 0.18);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+      gap: 4px !important;
     }
     .chip {
       position: relative;
       overflow: hidden;
-      padding: 8px 10px 9px !important;
-      border-radius: 5px !important;
-      border: 1px solid rgba(226, 232, 240, 0.24) !important;
-      border-bottom-color: rgba(15, 23, 42, 0.92) !important;
+      padding: 5px 8px 6px !important;
+      min-height: 36px;
+      border-radius: 3px !important;
+      border: 1px solid rgba(203, 213, 225, 0.22) !important;
+      border-bottom-color: rgba(15, 23, 42, 0.85) !important;
       background:
-        repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 3px),
-        linear-gradient(180deg, #525b68 0%, #373e48 16%, #262c34 82%, #191d23 100%) !important;
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.022) 0px, rgba(255,255,255,0.022) 1px, transparent 1px, transparent 3px),
+        linear-gradient(180deg, #434b57 0%, #343b45 18%, #2a3038 86%, #20252c 100%) !important;
       color: #f1f5f9 !important;
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.34),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.72),
-        0 2px 2px rgba(0, 0, 0, 0.82) !important;
-      transition: transform 0.06s ease, box-shadow 0.08s ease, border-color 0.12s ease !important;
+        inset 0 0.5px 0 rgba(255, 255, 255, 0.26),
+        inset 0 -0.5px 0 rgba(0, 0, 0, 0.65),
+        0 0.5px 1px rgba(0, 0, 0, 0.85) !important;
+      transition: transform 0.045s ease, box-shadow 0.06s ease, border-color 0.1s ease !important;
       touch-action: manipulation;
     }
     .chip::before {
       content: '';
       position: absolute;
-      top: 5px;
-      right: 7px;
-      width: 14px;
-      height: 2.5px;
+      top: 4px;
+      right: 6px;
+      width: 12px;
+      height: 2px;
       border-radius: 1px;
-      background: rgba(15, 23, 42, 0.85);
-      box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.9);
-      transition: background 0.12s ease, box-shadow 0.12s ease;
+      background: rgba(15, 23, 42, 0.88);
+      box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.9);
+      transition: background 0.1s ease, box-shadow 0.1s ease;
     }
     .chip.active::before {
       background: #38e0f0;
-      box-shadow: 0 0 8px rgba(56, 224, 240, 0.95), 0 0 2px #ffffff;
+      box-shadow: 0 0 6px rgba(56, 224, 240, 0.95), 0 0 2px #ffffff;
     }
     .chip::after {
       content: '';
       position: absolute;
       left: 0;
       bottom: 0;
-      height: 2px;
+      height: 1.5px;
       width: 0%;
       background: linear-gradient(90deg, #94a3b8, #e2e8f0, #38e0f0);
-      transition: width 0.095s linear;
+      transition: width 0.11s linear;
     }
     .chip.pressing {
-      transform: translateY(0.8px) scale(0.994) !important;
+      transform: translateY(0.3px) scale(0.998) !important;
       box-shadow:
-        inset 0 1.5px 3px rgba(0, 0, 0, 0.78),
-        inset 0 1px 0 rgba(255, 255, 255, 0.14),
-        0 0.5px 1px rgba(0, 0, 0, 0.9) !important;
+        inset 0 1px 2px rgba(0, 0, 0, 0.72),
+        inset 0 0.5px 0 rgba(255, 255, 255, 0.12) !important;
     }
     .chip.pressing::after {
       width: 100%;
     }
     .chip.engaged {
-      transform: translateY(1.2px) scale(0.992) !important;
+      transform: translateY(0.5px) scale(0.997) !important;
       border-color: rgba(226, 232, 240, 0.52) !important;
     }
     .chip.active {
-      border-color: rgba(148, 163, 184, 0.55) !important;
+      border-color: rgba(148, 163, 184, 0.5) !important;
       background:
-        repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 3px),
-        linear-gradient(180deg, #5d6776 0%, #3d4551 18%, #2a313a 84%, #1c2128 100%) !important;
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.028) 0px, rgba(255,255,255,0.028) 1px, transparent 1px, transparent 3px),
+        linear-gradient(180deg, #4f5866 0%, #3b434e 18%, #2e353f 86%, #242a32 100%) !important;
     }
     .chip strong {
-      font-size: 11px !important;
-      letter-spacing: 0.04em;
+      font-size: 10.5px !important;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
       color: #f8fafc !important;
-      padding-right: 18px;
+      padding-right: 16px;
+      line-height: 1.15;
     }
     .chip span {
-      font-size: 9.5px !important;
+      font-size: 9px !important;
       color: #cbd5e1 !important;
-      opacity: 0.78;
+      opacity: 0.74;
+      line-height: 1.15;
     }
-
   </style>
 </head>
 <body>
@@ -753,7 +755,7 @@
             playHiFiSteelClick('actuate', label);
             onActuate();
             setTimeout(function () { btn.classList.remove('engaged'); }, 140);
-          }, 95);
+          }, 110);
         });
         function cancelPress() {
           if (timer) { clearTimeout(timer); timer = null; }
