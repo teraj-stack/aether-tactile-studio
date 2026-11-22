@@ -1,0 +1,51 @@
+{
+  "name": "Aether Audiophile Flat Precision Design System",
+  "sourceScreen": "Architektura Brzmienia Dotyku (AetherSynthPanel.tsx)",
+  "savedAt": "2026-11-22T15:37:00+01:00",
+  "principles": {
+    "buttonProfile": "ultra-flat architectural flush keycap (zero pillowy/neumorphic cushions)",
+    "borderRadiusPx": 6,
+    "microTravelPx": 0.4,
+    "pressScale": 0.995,
+    "postInteractionGlow": "minimal hairline edge / precision LED slit only (no large bloom)",
+    "actuationFeel": "high-end audiophile brushed steel / anodized aluminum — firm break-over force, crisp 5ms detent"
+  },
+  "approvedButtonColors": {
+    "lightPalettePearl": {
+      "surfaceShinyGlass": "rgba(255, 255, 255, 0.82)",
+      "surfaceFrosted": "rgba(255, 255, 255, 0.62)",
+      "surfaceMatteMetalTop": "#F4F6FB",
+      "surfaceMatteMetalBottom": "#DCE2F0",
+      "surfaceAbs": "#F8FAFC",
+      "surfaceSuede": "#E9ECF8",
+      "primaryCtaStart": "#2E274E",
+      "primaryCtaMid": "#3A3163",
+      "primaryCtaEnd": "#282246",
+      "textPrimary": "#0F172A",
+      "textMuted": "#64748B",
+      "borderHairline": "rgba(148, 163, 184, 0.45)",
+      "accentIndicator": "#4F46E5"
+    },
+    "darkPaletteEmeraldObsidian": {
+      "surfaceMatteMetalTop": "#17332D",
+      "surfaceMatteMetalBottom": "#0D211D",
+      "surfaceAbs": "#122C26",
+      "surfaceSuede": "#102621",
+      "primaryCtaStart": "#67B596",
+      "primaryCtaEnd": "#3B7D65",
+      "textPrimary": "#ECFDF5",
+      "accentIndicator": "#34D399"
+    },
+    "hiFiBrushedSteel": {
+      "chassisBgTop": "#0B0E12",
+      "chassisBgBottom": "#141920",
+      "steelCapTop": "#434B57",
+      "steelCapMid": "#343B45",
+      "steelCapLow": "#2A3038",
+      "steelCapBottom": "#20252C",
+      "ledSlitActive": "#38E0F0",
+      "textSteel": "#F8FAFC",
+      "textSteelSub": "#CBD5E1"
+    }
+  }
+}

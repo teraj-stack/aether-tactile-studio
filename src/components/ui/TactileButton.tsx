@@ -218,94 +218,87 @@ export const TactileButton: React.FC<TactileButtonProps> = ({
     }
   };
 
+  // Flat audiophile precision profile: crisp low radius, zero pillowy cushions, minimal post-click glow
   const dynamicRadius =
-    variant === 'crystal-pill' || variant === 'neumorphic-icon'
+    variant === 'neumorphic-icon'
       ? 9999
-      : Math.max(14, depth.borderRadius - 4);
+      : variant === 'crystal-pill'
+        ? 8
+        : Math.min(10, Math.max(6, Math.round(depth.borderRadius * 0.32)));
 
   const shadowColor = isDark
-    ? 'rgba(0, 0, 0, 0.48)'
+    ? 'rgba(0, 0, 0, 0.52)'
     : palette === 'finance-ice'
-      ? 'rgba(79, 105, 198, 0.16)'
-      : 'rgba(88, 76, 148, 0.15)';
+      ? 'rgba(79, 105, 198, 0.14)'
+      : 'rgba(30, 41, 59, 0.14)';
 
   const specularAlpha =
-    (depth.specularRim / 100) * (effectiveMaterial === 'suede' ? 0.32 : 0.92);
-  const glowFactor = engraving.glowEnabled ? Math.max(0.35, engraving.glowIntensity / 100) : 0.32;
+    (depth.specularRim / 100) * (effectiveMaterial === 'suede' ? 0.18 : 0.42);
 
   const boxShadowStyle = isPressed
-    ? `inset 0 2px 9px ${shadowColor}, inset 0 1px 0 rgba(255,255,255,${(specularAlpha * 0.65).toFixed(2)}), 0 0 ${Math.round(
-        animation.glowSpread * (0.75 + holdIntensity * 0.9)
-      )}px ${effectiveGlowColor}88, 0 0 12px ${effectiveGlowColor}55`
-    : selected || isHovered || effectiveIlluminationId === 'subsurface-caustic'
-      ? `0 ${Math.round(depth.elevation * 0.62)}px ${Math.round(
-          depth.blur * 0.78
-        )}px ${shadowColor}, 0 0 ${Math.round(
-          glowFactor * (effectiveIlluminationId === 'subsurface-caustic' ? 38 : isHovered ? 28 : 22)
-        )}px ${effectiveGlowColor}${isHovered ? '58' : '44'}, inset 0 1px 1.5px rgba(255,255,255,${specularAlpha.toFixed(2)}), inset 0 -1px 6px ${effectiveGlowColor}26`
-      : `0 ${Math.round(depth.elevation * 0.52)}px ${Math.round(
-          depth.blur * 0.68
-        )}px ${shadowColor}, inset 0 1px 1.5px rgba(255,255,255,${specularAlpha.toFixed(2)})`;
+    ? `inset 0 1px 2px ${shadowColor}, inset 0 0.5px 0 rgba(255,255,255,${(specularAlpha * 0.35).toFixed(2)}), 0 0 4px ${effectiveGlowColor}33`
+    : selected || isHovered
+      ? `0 1px 2px ${shadowColor}, 0 0 4px ${effectiveGlowColor}28, inset 0 0.5px 0 rgba(255,255,255,${specularAlpha.toFixed(2)})`
+      : `0 1px 2px ${shadowColor}, inset 0 0.5px 0 rgba(255,255,255,${specularAlpha.toFixed(2)})`;
 
-  // Compute compositor-only motion targets per preset
+  // Compute tight flat micro-travel motion targets (minimal amplitude, precision audiophile switch feel)
   const holdTremorX =
-    holdIntensity > 0.25 ? Math.sin(performance.now() * 0.06) * holdIntensity * 1.35 : 0;
+    holdIntensity > 0.3 ? Math.sin(performance.now() * 0.06) * holdIntensity * 0.55 : 0;
 
   let targetX = holdTremorX;
   let targetY = 0;
   let targetRotateX = 0;
   let targetRotateY = 0;
-  let targetScale = isPressed ? activePressScale - holdIntensity * 0.014 : 1;
+  let targetScale = isPressed ? Math.max(0.992, Math.min(0.996, activePressScale)) : 1;
 
   if (!disabled) {
     switch (effectiveMotionId) {
       case 'magnetic-levitation':
         if (isHovered && !isPressed) {
-          targetX += pointerCoords.normX * 3.8;
-          targetY = pointerCoords.normY * 2.4 - 2;
-          targetScale = 1.012;
+          targetX += pointerCoords.normX * 1.1;
+          targetY = -0.4;
+          targetScale = 1.002;
         } else if (isPressed) {
-          targetY = 1;
+          targetY = 0.45;
         }
         break;
       case 'liquid-glass-spring':
         if (isHovered && !isPressed) {
-          targetY = -2;
-          targetScale = 1.014;
+          targetY = -0.4;
+          targetScale = 1.002;
+        } else if (isPressed) {
+          targetY = 0.45;
         }
         break;
       case 'cnc-micro-detent':
         if (isPressed) {
-          targetY = 1.6;
+          targetY = 0.5;
         } else if (isHovered) {
-          targetY = -0.8;
-          targetScale = 1.005;
+          targetY = -0.25;
         }
         break;
       case 'velvet-cushion':
         if (isPressed) {
-          targetY = 2.2;
+          targetY = 0.6;
         } else if (isHovered) {
-          targetY = -1.2;
-          targetScale = 1.008;
+          targetY = -0.25;
         }
         break;
       case 'rocker-tilt':
         if (isPressed) {
-          targetRotateY = pointerCoords.normX * 8.5;
-          targetRotateX = -pointerCoords.normY * 7.5;
+          targetRotateY = pointerCoords.normX * 3.5;
+          targetRotateX = -pointerCoords.normY * 2.5;
         } else if (isHovered) {
-          targetRotateY = pointerCoords.normX * 4.5;
-          targetRotateX = -pointerCoords.normY * 4;
-          targetY = -1.5;
+          targetRotateY = pointerCoords.normX * 1.8;
+          targetRotateX = -pointerCoords.normY * 1.4;
         }
         break;
       case 'harmonic-hover-lift':
         if (isPressed) {
-          targetY = 1.2;
+          targetY = 0.45;
         } else if (isHovered) {
-          targetY = -3.5;
-          targetScale = 1.018;
+          targetY = -0.5;
+          targetScale = 1.003;
         }
         break;
     }
@@ -486,19 +479,19 @@ export const TactileButton: React.FC<TactileButtonProps> = ({
           />
         )}
 
-      {/* Enhanced Key-Edge Luminous Highlight & Press Wave */}
+      {/* Minimal Precision Edge Highlight on Press (subtle audiophile LED response) */}
       <span
         aria-hidden="true"
         style={{
-          opacity: isPressed ? 1 : isHovered ? 0.85 : 0,
-          background: `radial-gradient(circle 130px at ${pointerCoords.spotX}% ${pointerCoords.spotY}%, ${effectiveGlowColor}${isPressed ? '70' : '38'} 0%, transparent 72%)`,
+          opacity: isPressed ? 0.34 : isHovered ? 0.18 : 0,
+          background: `radial-gradient(circle 78px at ${pointerCoords.spotX}% ${pointerCoords.spotY}%, ${effectiveGlowColor}${isPressed ? '32' : '1c'} 0%, transparent 68%)`,
           boxShadow: isPressed
-            ? `inset 0 0 0 1.5px ${effectiveGlowColor}, 0 0 22px ${effectiveGlowColor}55`
+            ? `inset 0 0 0 1px ${effectiveGlowColor}66`
             : isHovered
-              ? `inset 0 0 0 1px ${effectiveGlowColor}88`
+              ? `inset 0 0 0 0.5px ${effectiveGlowColor}44`
               : 'none',
         }}
-        className="pointer-events-none absolute inset-0 rounded-[inherit] transition-all duration-150"
+        className="pointer-events-none absolute inset-0 rounded-[inherit] transition-all duration-100"
       />
 
       <span className="relative z-10 flex items-center justify-between gap-3 w-full">
