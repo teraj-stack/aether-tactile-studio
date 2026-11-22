@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Aether 3D — Pokrętło CNC 270° (Lekki Tryb Tablet)</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+      background: radial-gradient(circle at 50% 20%, #0d3b44, #041316 70%);
+      color: #ecfeff; display: flex; flex-direction: column; align-items: center;
+    }
+    .wrap { width: 100%; max-width: 560px; padding: max(16px, env(safe-area-inset-top)) 16px 28px; display: flex; flex-direction: column; gap: 14px; }
+    .hdr { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .tag { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: #38e0f0; font-weight: 700; }
+    h1 { margin: 2px 0 0; font-size: 19px; }
+    a.back { color: #a5f3fc; font-size: 12px; font-weight: 600; text-decoration: none; padding: 7px 11px; border-radius: 12px; border: 1px solid rgba(103,232,249,0.28); background: rgba(255,255,255,0.06); }
+    #unlockBtn { width: 100%; padding: 13px; border-radius: 16px; border: none; font-weight: 700; font-size: 14px; color: #fff; background: linear-gradient(135deg, #06b6d4, #6366f1); cursor: pointer; }
+    .stage { border-radius: 28px; overflow: hidden; border: 1px solid rgba(103,232,249,0.3); background: rgba(3,12,16,0.75); box-shadow: 0 24px 60px rgba(0,0,0,0.55); touch-action: none; }
+    canvas { width: 100%; height: min(52vh, 390px); display: block; cursor: grab; }
+    .hud { padding: 11px 14px; border-radius: 14px; background: rgba(0,0,0,0.35); border: 1px solid rgba(103,232,249,0.22); font-size: 12.5px; display: flex; justify-content: space-between; gap: 8px; }
+    .presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .chip { padding: 11px 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.06); color: #fff; text-align: left; cursor: pointer; }
+    .chip.active { background: rgba(56,224,240,0.2); border-color: #38e0f0; }
+    .chip strong { display: block; font-size: 12.5px; }
+    .chip span { font-size: 10.5px; color: rgba(207,250,254,0.7); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hdr">
+      <div>
+        <div class="tag">Model 3D #1 · Ultralekki (60 FPS)</div>
+        <h1>Pokrętło CNC 270°</h1>
+      </div>
+      <a class="back" href="./">Całe Studio</a>
+    </div>
+    <button id="unlockBtn" type="button">Dotknij raz, aby włączyć dźwięk &lt;160 Hz i wibracje</button>
+    <div class="stage"><canvas id="c" width="540" height="420"></canvas></div>
+    <div class="hud"><span id="hudStatus">Kręć palcem po okręgu (270°)</span><span id="degInfo" style="color:#38e0f0;font-family:monospace;">50% · 0.0°</span></div>
+    <div class="presets" id="presets"></div>
+  </div>
+  <script>
+    (function(){
+      
+      var PROFILES = {
+        'satin-tick-4ms': { name: '05. Satynowy Mikro-Tik', hz: 112, drop: 64, ms: 4, wave: 'triangle', trans: 0.24, vib: 3 },
+        'ceramic-pip-5ms': { name: '04. Ceramiczna Zapadka', hz: 96, drop: 52, ms: 5, wave: 'triangle', trans: 0.22, vib: 4 },
+        'anodized-relay-9ms': { name: '06. Anodowany Przekaźnik', hz: 68, drop: 38, ms: 9, wave: 'triangle', trans: 0.19, vib: 6 },
+        'leica-shutter-snap-6ms': { name: '10. Migawka Leica', hz: 94, drop: 42, ms: 6, wave: 'triangle', trans: 0.34, vib: 7 },
+        'calacatta-marble-tap-8ms': { name: '12. Marmur Calacatta', hz: 82, drop: 38, ms: 8, wave: 'triangle', trans: 0.22, vib: 6 },
+        'deep-sub-pulse-16ms': { name: '14. Sub-Bass 52 Hz', hz: 52, drop: 28, ms: 16, wave: 'sine', trans: 0.06, vib: 12 },
+        'titanium-whisper-7ms': { name: '08. Tytanowy Klik', hz: 74, drop: 41, ms: 7, wave: 'sine', trans: 0.11, vib: 5 },
+        'vacuum-seal-14ms': { name: '07. Próżniowe Domknięcie', hz: 42, drop: 26, ms: 14, wave: 'sine', trans: 0.05, vib: 9 },
+        'monolith-thud-12ms': { name: '03. Monolityczny Opór', hz: 46, drop: 28, ms: 12, wave: 'sine', trans: 0.06, vib: 12 },
+        'crystal-glass-tap-9ms': { name: '09. Kryształowy Impuls Szkła', hz: 108, drop: 64, ms: 9, wave: 'sine', trans: 0.28, vib: 7 },
+        'velvet-clinic-chime-15ms': { name: '11. Aksamitny Rezonans', hz: 64, drop: 46, ms: 15, wave: 'sine', trans: 0.08, vib: 8 }
+      };
+      var ctx = null;
+      var intensity = 85;
+      function ensureAudio() {
+        var AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return null;
+        if (!ctx) ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume().catch(function(){});
+        var b = document.getElementById('unlockBtn');
+        if (b) b.style.display = 'none';
+        return ctx;
+      }
+      function playClick(id, label, vibMs, mult) {
+        var spec = PROFILES[id] || PROFILES['crystal-glass-tap-9ms'];
+        var gain = Math.max(0.12, Math.min(1.25, (intensity / 100) * (mult || 1)));
+        if (navigator.vibrate) { try { navigator.vibrate(vibMs || spec.vib); } catch(e){} }
+        var hud = document.getElementById('hudStatus');
+        if (hud) hud.textContent = label + ' · ' + spec.hz + '→' + spec.drop + ' Hz';
+        var ac = ensureAudio();
+        if (!ac) return;
+        var now = ac.currentTime;
+        var dur = Math.max(0.004, Math.min(0.02, spec.ms / 1000)) + 0.006;
+        var osc = ac.createOscillator();
+        osc.type = spec.wave;
+        osc.frequency.setValueAtTime(spec.hz, now);
+        osc.frequency.exponentialRampToValueAtTime(spec.drop, now + dur);
+        var sub = ac.createOscillator();
+        sub.type = 'sine';
+        sub.frequency.setValueAtTime(Math.max(24, spec.hz * 0.5), now);
+        var lp = ac.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.setValueAtTime(152, now); lp.Q.setValueAtTime(0.85, now);
+        var sg = ac.createGain(); sg.gain.setValueAtTime(0.28 * gain, now);
+        var eg = ac.createGain();
+        eg.gain.setValueAtTime(0.0001, now);
+        eg.gain.linearRampToValueAtTime(Math.min(0.65, 0.45 * gain), now + 0.0009);
+        eg.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        osc.connect(lp); sub.connect(sg); sg.connect(lp); lp.connect(eg); eg.connect(ac.destination);
+        osc.start(now); sub.start(now); osc.stop(now + dur + 0.004); sub.stop(now + dur + 0.004);
+        if (spec.trans > 0.02) {
+          var co = ac.createOscillator(); co.type = 'triangle';
+          co.frequency.setValueAtTime(Math.min(780, spec.hz * 6.2), now);
+          co.frequency.exponentialRampToValueAtTime(140, now + 0.0028);
+          var cg = ac.createGain();
+          cg.gain.setValueAtTime(spec.trans * 0.34 * gain, now);
+          cg.gain.exponentialRampToValueAtTime(0.0001, now + 0.0032);
+          co.connect(cg); cg.connect(ac.destination); co.start(now); co.stop(now + 0.0045);
+        }
+      }
+
+      var PRESETS = [
+        { id: 'cnc120', label: '120T CNC (Wzorzec)', sub: '270° · co 10 główna', detents: 120, major: 10, minor: 'satin-tick-4ms', majorS: 'anodized-relay-9ms' },
+        { id: 'att60', label: 'Attenuator 60T', sub: 'Wyrazisty przekaźnik', detents: 60, major: 5, minor: 'ceramic-pip-5ms', majorS: 'leica-shutter-snap-6ms' },
+        { id: 'fly24', label: 'Koło Zamachowe 24T', sub: 'Głęboka zapadka 56 Hz', detents: 24, major: 4, minor: 'calacatta-marble-tap-8ms', majorS: 'deep-sub-pulse-16ms' },
+        { id: 'oil96', label: 'Tłumik Olejowy 96T', sub: 'Cichy mikro-klik 48 Hz', detents: 96, major: 12, minor: 'titanium-whisper-7ms', majorS: 'vacuum-seal-14ms' }
+      ];
+      var preset = PRESETS[0], norm = 0.5, lastD = 60, dragging = false;
+      var canvas = document.getElementById('c'), rctx = canvas.getContext('2d');
+      var degInfo = document.getElementById('degInfo');
+      document.getElementById('unlockBtn').addEventListener('click', function(){ playClick('anodized-relay-9ms', 'Pokrętło CNC 270° gotowe', 8); });
+
+      function renderPresets() {
+        var box = document.getElementById('presets'); box.innerHTML = '';
+        PRESETS.forEach(function(p){
+          var b = document.createElement('button'); b.type = 'button';
+          b.className = 'chip' + (preset.id === p.id ? ' active' : '');
+          b.innerHTML = '<strong>' + p.label + '</strong><span>' + p.sub + '</span>';
+          b.addEventListener('click', function(){ preset = p; lastD = Math.round(norm * p.detents); renderPresets(); playClick(p.majorS, p.label, 8); });
+          box.appendChild(b);
+        });
+      }
+
+      function onPtr(x, y) {
+        var r = canvas.getBoundingClientRect();
+        var deg = Math.atan2(y - (r.top + r.height/2), x - (r.left + r.width/2)) * 180 / Math.PI + 90;
+        if (deg > 180) deg -= 360;
+        var hit = false;
+        if (deg < -135) { deg = -135; hit = norm > 0.01; }
+        if (deg > 135) { deg = 135; hit = norm < 0.99; }
+        norm = (deg + 135) / 270;
+        var d = Math.round(norm * preset.detents);
+        if (hit) playClick('monolith-thud-12ms', 'Opór krańcowy 270°', 12, 1.0);
+        else if (d !== lastD) {
+          var maj = d % preset.major === 0;
+          playClick(maj ? preset.majorS : preset.minor, 'Krok ' + d + '/' + preset.detents + (maj ? ' (Główna)' : ''), maj ? 8 : 3, maj ? 1.0 : 0.55);
+          lastD = d;
+        }
+        degInfo.textContent = Math.round(norm * 100) + '% · ' + (deg >= 0 ? '+' : '') + deg.toFixed(1) + '°';
+      }
+      canvas.addEventListener('pointerdown', function(e){ dragging = true; canvas.setPointerCapture(e.pointerId); onPtr(e.clientX, e.clientY); });
+      canvas.addEventListener('pointermove', function(e){ if (dragging) onPtr(e.clientX, e.clientY); });
+      canvas.addEventListener('pointerup', function(){ dragging = false; });
+      canvas.addEventListener('pointercancel', function(){ dragging = false; });
+
+      function draw() {
+        var w = canvas.width, h = canvas.height, cx = w/2, cy = h/2, rad = Math.min(w, h) * 0.34;
+        rctx.clearRect(0, 0, w, h);
+        var ticks = Math.min(60, preset.detents);
+        for (var i = 0; i <= ticks; i++) {
+          var t = i / ticks, a = ((-135 + t * 270) - 90) * Math.PI / 180;
+          var maj = i % Math.max(1, Math.round(ticks / 12)) === 0;
+          rctx.beginPath();
+          rctx.moveTo(cx + Math.cos(a) * (rad + 18), cy + Math.sin(a) * (rad + 18));
+          rctx.lineTo(cx + Math.cos(a) * (rad + (maj ? 38 : 26)), cy + Math.sin(a) * (rad + (maj ? 38 : 26)));
+          rctx.strokeStyle = t <= norm + 0.002 ? (maj ? '#38e0f0' : 'rgba(56,224,240,0.7)') : 'rgba(207,250,254,0.18)';
+          rctx.lineWidth = maj ? 3.2 : 1.7; rctx.stroke();
+        }
+        var bz = rctx.createLinearGradient(cx-rad, cy-rad, cx+rad, cy+rad);
+        bz.addColorStop(0, '#bae6fd'); bz.addColorStop(0.4, '#1e3a46'); bz.addColorStop(1, '#38bdf8');
+        rctx.beginPath(); rctx.arc(cx, cy, rad + 7, 0, Math.PI*2); rctx.fillStyle = bz; rctx.fill();
+        var fc = rctx.createRadialGradient(cx-rad*0.3, cy-rad*0.35, 10, cx, cy, rad);
+        fc.addColorStop(0, '#365664'); fc.addColorStop(0.55, '#122730'); fc.addColorStop(1, '#061217');
+        rctx.beginPath(); rctx.arc(cx, cy, rad - 3, 0, Math.PI*2); rctx.fillStyle = fc; rctx.fill();
+        var ang = ((-135 + norm * 270) - 90) * Math.PI / 180;
+        rctx.beginPath();
+        rctx.moveTo(cx + Math.cos(ang)*(rad*0.28), cy + Math.sin(ang)*(rad*0.28));
+        rctx.lineTo(cx + Math.cos(ang)*(rad*0.72), cy + Math.sin(ang)*(rad*0.72));
+        rctx.strokeStyle = '#38e0f0'; rctx.lineWidth = 6; rctx.lineCap = 'round';
+        rctx.shadowColor = '#38e0f0'; rctx.shadowBlur = 18; rctx.stroke(); rctx.shadowBlur = 0;
+        rctx.fillStyle = '#ecfeff'; rctx.font = '700 32px -apple-system, sans-serif';
+        rctx.textAlign = 'center'; rctx.textBaseline = 'middle';
+        rctx.fillText(Math.round(norm * 100) + '%', cx, cy + 2);
+        requestAnimationFrame(draw);
+      }
+      renderPresets(); draw();
+    })();
+  </script>
+</body>
+</html>

@@ -15,9 +15,15 @@ import {
 import { useStudio } from '../context/StudioContext';
 import { hapticAudio } from '../lib/hapticAudioEngine';
 
-type MobileTargetMode = 'github-pages' | 'mobile-pad' | 'haptics' | 'start' | 'studio';
+type MobileTargetMode =
+  | 'github-pages'
+  | 'rotary-3d'
+  | 'sphere-3d'
+  | 'mobile-pad'
+  | 'haptics'
+  | 'studio';
 
-const GITHUB_PAGES_MOBILE_URL = 'https://teraj-stack.github.io/aether-tactile-studio/';
+const GITHUB_PAGES_BASE_URL = 'https://teraj-stack.github.io/aether-tactile-studio';
 
 interface NetworkInfoResponse {
   port: number;
@@ -86,13 +92,15 @@ export const MobileQrHapticsModal: React.FC<MobileQrHapticsModalProps> = ({
   const targetUrl = useMemo(() => {
     switch (targetMode) {
       case 'github-pages':
-        return GITHUB_PAGES_MOBILE_URL;
+        return `${GITHUB_PAGES_BASE_URL}/`;
+      case 'rotary-3d':
+        return `${GITHUB_PAGES_BASE_URL}/rotary-3d.html`;
+      case 'sphere-3d':
+        return `${GITHUB_PAGES_BASE_URL}/sphere-3d.html`;
       case 'mobile-pad':
         return `${resolvedBaseUrl}/?mobileTest=1`;
       case 'haptics':
         return `${resolvedBaseUrl}/?tab=haptics`;
-      case 'start':
-        return `${resolvedBaseUrl}/?tab=start`;
       case 'studio':
       default:
         return `${resolvedBaseUrl}/`;
@@ -151,23 +159,23 @@ export const MobileQrHapticsModal: React.FC<MobileQrHapticsModalProps> = ({
   }> = [
     {
       id: 'github-pages',
-      label: 'GitHub Pages HTTPS (Polecane)',
-      hint: 'Działa z każdego telefonu/tabletu (Wi-Fi/LTE, bez zapory!) + tryb offline PWA',
+      label: 'Całe Studio + 3D (HTTPS)',
+      hint: 'Sterowniki 3D + BM Clinic + 14 dźwięków (działa z każdego tabletu)',
+    },
+    {
+      id: 'rotary-3d',
+      label: 'Tylko Model 3D: Pokrętło CNC 270°',
+      hint: 'Ultralekki, dedykowany kod QR wyłącznie pod pokrętło 3D (4 presety)',
+    },
+    {
+      id: 'sphere-3d',
+      label: 'Tylko Model 3D: Sfera Haptyczna 3D',
+      hint: 'Ultralekki, dedykowany kod QR wyłącznie pod sferę 3D i 5 materiałów',
     },
     {
       id: 'mobile-pad',
       label: 'Lokalny Pad Wi-Fi (LAN)',
-      hint: 'Lokalny serwer na Macu (wymaga tej samej sieci Wi-Fi i otwartej zapory)',
-    },
-    {
-      id: 'haptics',
-      label: 'Haptyka i Audio (LAN)',
-      hint: 'Pełny panel syntezatora, oscyloskopu i profili',
-    },
-    {
-      id: 'studio',
-      label: 'Całe Studio (LAN)',
-      hint: 'Strona główna Aether Tactile Studio',
+      hint: 'Lokalny serwer na Macu (wymaga tej samej sieci Wi-Fi)',
     },
   ];
 

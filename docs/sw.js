@@ -1,5 +1,5 @@
-const CACHE_NAME = 'aether-tactile-studio-v2';
-const ASSETS = ['./', './index.html', './manifest.json', './icon-1024.png'];
+const CACHE_NAME = 'aether-tactile-studio-v3';
+const ASSETS = ['./', './index.html', './rotary-3d.html', './sphere-3d.html', './manifest.json', './icon-1024.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
