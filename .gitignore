@@ -6,3 +6,12 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Added by Antigravity sync
+.env
+.env.local
+.env.*.local
+.next/
+tsconfig.tsbuildinfo
+release/
+*.app/
