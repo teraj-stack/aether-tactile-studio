@@ -21,6 +21,7 @@ import { StartWorkspaceSection } from './components/StartWorkspaceSection';
 import { DashboardView } from './components/DashboardView';
 import { AetherSynthPanel } from './components/AetherSynthPanel';
 import { HapticSettingsPanel } from './components/HapticSettingsPanel';
+import { MagicGlassChimePanel } from './components/MagicGlassChimePanel';
 import { SourcePromptStudio } from './components/SourcePromptStudio';
 import { GeminiMultimediaStudio } from './components/GeminiMultimediaStudio';
 import { TactileComponentsHub } from './components/TactileComponentsHub';
@@ -107,6 +108,7 @@ const StudioShell: React.FC = () => {
   const [targetZone, setTargetZone] = useState<PrototypeDropZone>('main');
   const [includeScreenContext, setIncludeScreenContext] = useState<boolean>(true);
   const [includeVisualTokens, setIncludeVisualTokens] = useState<boolean>(true);
+  const [hapticsSubTab, setHapticsSubTab] = useState<'magic' | 'haptics' | 'synth'>('magic');
   const [includeHapticAudio, setIncludeHapticAudio] = useState<boolean>(true);
   const [includeBuildMatrix, setIncludeBuildMatrix] = useState<boolean>(true);
 
@@ -132,7 +134,7 @@ const StudioShell: React.FC = () => {
     { id: 'start', label: 'Start' },
     { id: 'dashboard', label: 'Pulpit' },
     { id: 'screens', label: 'Mapa Ekranów' },
-    { id: 'haptics', label: 'Haptyka i Audio' },
+    { id: 'haptics', label: 'Magic Sounds' },
     { id: 'ui-library', label: 'Biblioteka i Kreator' },
   ];
 
@@ -191,7 +193,7 @@ const StudioShell: React.FC = () => {
             onClick={() => handleSelectTab('start')}
             className="text-lg font-bold tracking-tight text-slate-900 dark:text-emerald-50 whitespace-nowrap shrink-0 cursor-pointer"
           >
-            Aether Tactile Studio
+            Magic Sounds · Aether Studio
           </button>
 
           {/* Zone 2: 5 Concise Single-Line Navigation Links */}
@@ -509,12 +511,31 @@ const StudioShell: React.FC = () => {
 
                 {(activeTab === 'haptics' || activeTab === 'synth') && (
                   <div className="space-y-6">
-                    <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-white/65 dark:bg-emerald-950/75 border border-white/80 dark:border-emerald-400/20">
+                    <div className="inline-flex flex-wrap items-center gap-1 p-1 rounded-xl bg-white/65 dark:bg-emerald-950/75 border border-white/80 dark:border-emerald-400/20">
                       <button
                         type="button"
-                        onClick={() => handleSelectTab('haptics')}
+                        onClick={() => {
+                          setHapticsSubTab('magic');
+                          handleSelectTab('haptics');
+                        }}
                         className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 min-h-[36px] ${
-                          activeTab === 'haptics'
+                          activeTab === 'haptics' && hapticsSubTab === 'magic'
+                            ? isDark
+                              ? 'bg-emerald-400 text-emerald-950 shadow-sm'
+                              : 'bg-slate-900 text-white shadow-sm'
+                            : 'text-slate-600 dark:text-emerald-200/80'
+                        }`}
+                      >
+                        ✨ Cymbałki / Szkło + 4 Doznania + Przyciski
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHapticsSubTab('haptics');
+                          handleSelectTab('haptics');
+                        }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 min-h-[36px] ${
+                          activeTab === 'haptics' && hapticsSubTab === 'haptics'
                             ? isDark
                               ? 'bg-emerald-400 text-emerald-950 shadow-sm'
                               : 'bg-slate-900 text-white shadow-sm'
@@ -525,7 +546,10 @@ const StudioShell: React.FC = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleSelectTab('synth')}
+                        onClick={() => {
+                          setHapticsSubTab('synth');
+                          handleSelectTab('synth');
+                        }}
                         className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 min-h-[36px] ${
                           activeTab === 'synth'
                             ? isDark
@@ -537,10 +561,12 @@ const StudioShell: React.FC = () => {
                         Syntezator Akustyczny (&lt;160 Hz)
                       </button>
                     </div>
-                    {activeTab === 'haptics' ? (
-                      <HapticSettingsPanel />
-                    ) : (
+                    {activeTab === 'synth' ? (
                       <AetherSynthPanel />
+                    ) : hapticsSubTab === 'magic' ? (
+                      <MagicGlassChimePanel />
+                    ) : (
+                      <HapticSettingsPanel />
                     )}
                   </div>
                 )}

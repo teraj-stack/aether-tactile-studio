@@ -79,6 +79,7 @@ export const RotaryDriverCalibrationService: React.FC = () => {
   const [copiedJson, setCopiedJson] = useState(false);
   const [refImgError, setRefImgError] = useState(false);
   const [zoomReference, setZoomReference] = useState(false);
+  const [knobVisualMode, setKnobVisualMode] = useState<'3d-knurled' | 'flat-2d'>('3d-knurled');
 
   const dialRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef(false);
@@ -554,66 +555,176 @@ export const RotaryDriverCalibrationService: React.FC = () => {
                   })}
                 </svg>
 
-                {/* Recessed Outer Shadow Moat & Polished Chrome Bevel Collar */}
-                <div
-                  className="w-[206px] h-[206px] sm:w-[236px] sm:h-[236px] rounded-full flex items-center justify-center p-2.5"
-                  style={{
-                    background:
-                      'linear-gradient(145deg, #d5d9e0 0%, #aeb4bf 46%, #7d8490 100%)',
-                    boxShadow: isDark
-                      ? '0 16px 32px rgba(0,0,0,0.65), inset 0 2px 3px rgba(255,255,255,0.55)'
-                      : '0 16px 30px rgba(30,41,59,0.24), -6px -6px 18px rgba(255,255,255,0.9), inset 0 2px 3px rgba(255,255,255,0.85)',
-                  }}
-                >
-                  {/* Specular Chrome Inner Rim + Dark Recessed Gap */}
-                  <div
-                    className="w-full h-full rounded-full p-[7px] flex items-center justify-center"
-                    style={{
-                      background:
-                        'linear-gradient(180deg, #ffffff 0%, #9ca3af 38%, #1f2937 78%, #4b5563 100%)',
-                      boxShadow: 'inset 0 3px 8px rgba(0,0,0,0.65)',
-                    }}
-                  >
-                    {/* Rotating Radial Spun-Metal Stainless Rotor */}
+                {/* Recessed Outer Shadow Moat & Polished Chrome Bevel Collar OR True 3D Knurled CNC Knob */}
+                {knobVisualMode === '3d-knurled' ? (
+                  <div className="relative w-[224px] h-[224px] sm:w-[252px] sm:h-[252px] flex items-center justify-center">
+                    {/* Deep contact shadow beneath 3D machined cylinder */}
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-3 w-[206px] sm:w-[232px] h-[72px] rounded-full blur-xl opacity-70"
+                      style={{
+                        background: 'radial-gradient(ellipse at center, rgba(2,6,23,0.92) 0%, rgba(2,6,23,0.4) 55%, transparent 80%)',
+                      }}
+                    />
+
+                    {/* 3D Cylindrical Diamond-Knurled Side Wall */}
                     <div
                       style={{
-                        transform: `rotate(${currentAngleDeg}deg) scale(${
-                          axialPressed ? 0.976 : 1
-                        })`,
-                        backgroundImage: `
-                          repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,0.09) 0px, rgba(15,23,42,0.08) 1.2px, rgba(255,255,255,0.06) 2.4px),
-                          conic-gradient(from 18deg at 50% 50%,
-                            #8b929e 0deg,
-                            #eef2f8 34deg,
-                            #6f7785 74deg,
-                            #cfd6e2 112deg,
-                            #525967 154deg,
-                            #f8fafc 198deg,
-                            #767e8c 242deg,
-                            #d5dce6 286deg,
-                            #5b6270 326deg,
-                            #8b929e 360deg
-                          )
-                        `,
-                        boxShadow:
-                          'inset 0 1px 2px rgba(255,255,255,0.85), inset 0 -2px 6px rgba(15,23,42,0.45), 0 4px 10px rgba(0,0,0,0.45)',
+                        transform: `translateY(${axialPressed ? 4 : 0}px) scale(${axialPressed ? 0.985 : 1})`,
                       }}
-                      className="relative w-full h-full rounded-full border border-slate-300/80 flex flex-col items-center justify-start pt-3 transition-transform duration-75"
+                      className="relative w-[206px] sm:w-[232px] h-[168px] sm:h-[186px] transition-transform duration-75"
                     >
-                      {/* Milled Dark Radial Index Mark (matching photo notch) */}
-                      <span
-                        className="w-[3.5px] h-6 rounded-sm bg-slate-900 border border-white/35"
+                      {/* Lower cylindrical body with diamond knurling that shifts horizontally with rotation */}
+                      <div
+                        className="absolute inset-x-0 bottom-0 h-[120px] sm:h-[132px] rounded-b-[116px] overflow-hidden border-b-2 border-slate-500/80"
                         style={{
-                          boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.9), 0 0 1px rgba(255,255,255,0.5)',
+                          backgroundColor: '#7c838f',
+                          backgroundImage: `
+                            linear-gradient(90deg, rgba(15,23,42,0.72) 0%, rgba(255,255,255,0.22) 18%, rgba(255,255,255,0.42) 38%, rgba(15,23,42,0.12) 55%, rgba(255,255,255,0.26) 76%, rgba(15,23,42,0.78) 100%),
+                            repeating-linear-gradient(45deg, rgba(255,255,255,0.52) 0px, rgba(255,255,255,0.52) 2.5px, rgba(15,23,42,0.68) 2.5px, rgba(15,23,42,0.68) 6px),
+                            repeating-linear-gradient(-45deg, rgba(255,255,255,0.44) 0px, rgba(255,255,255,0.44) 2.5px, rgba(15,23,42,0.58) 2.5px, rgba(15,23,42,0.58) 6px)
+                          `,
+                          backgroundPosition: `0 0, ${Math.round(currentAngleDeg * 1.4)}px 0, ${Math.round(currentAngleDeg * 1.4)}px 0`,
+                          boxShadow: 'inset 0 -10px 18px rgba(0,0,0,0.65), 0 18px 28px rgba(0,0,0,0.55)',
                         }}
                       />
 
-                      {/* Subtle Center Lathe Hub */}
-                      <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-slate-400/40 border border-white/40" />
+                      {/* Chamfered Chrome Bevel Ring + Elliptical 3D Top Spun-Aluminum Face */}
+                      <div
+                        className="absolute inset-x-0 top-0 h-[126px] sm:h-[140px] rounded-[50%] p-[4px] flex items-center justify-center"
+                        style={{
+                          background:
+                            'linear-gradient(180deg, #f8fafc 0%, #cbd5e1 35%, #64748b 78%, #e2e8f0 100%)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.95)',
+                        }}
+                      >
+                        <div
+                          className="relative w-full h-full rounded-[50%] overflow-hidden flex items-center justify-center"
+                          style={{
+                            backgroundImage: `
+                              repeating-radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.14) 0px, rgba(15,23,42,0.09) 1.3px, rgba(255,255,255,0.07) 2.6px),
+                              conic-gradient(from ${Math.round(currentAngleDeg + 22)}deg at 50% 50%,
+                                #9aa2b0 0deg,
+                                #f8fafc 32deg,
+                                #747c8a 76deg,
+                                #dbe2ec 118deg,
+                                #5b6370 162deg,
+                                #ffffff 204deg,
+                                #7c8594 248deg,
+                                #e2e8f0 292deg,
+                                #636b78 332deg,
+                                #9aa2b0 360deg
+                              )
+                            `,
+                            boxShadow: 'inset 0 2px 5px rgba(255,255,255,0.85), inset 0 -3px 8px rgba(15,23,42,0.38)',
+                          }}
+                        >
+                          {/* Rotating 3D Perspective Index Notch */}
+                          <div
+                            style={{
+                              transform: `rotate(${currentAngleDeg}deg)`,
+                            }}
+                            className="w-full h-full flex flex-col items-center justify-start pt-2.5 transition-transform duration-75"
+                          >
+                            <span
+                              className="w-[4px] h-5 rounded-sm bg-slate-900 border border-white/50"
+                              style={{
+                                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.9), 0 0 2px rgba(255,255,255,0.7)',
+                              }}
+                            />
+                          </div>
+                          <span className="pointer-events-none absolute w-2.5 h-2 rounded-full bg-slate-400/50 border border-white/50" />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div
+                    className="w-[206px] h-[206px] sm:w-[236px] sm:h-[236px] rounded-full flex items-center justify-center p-2.5"
+                    style={{
+                      background:
+                        'linear-gradient(145deg, #d5d9e0 0%, #aeb4bf 46%, #7d8490 100%)',
+                      boxShadow: isDark
+                        ? '0 16px 32px rgba(0,0,0,0.65), inset 0 2px 3px rgba(255,255,255,0.55)'
+                        : '0 16px 30px rgba(30,41,59,0.24), -6px -6px 18px rgba(255,255,255,0.9), inset 0 2px 3px rgba(255,255,255,0.85)',
+                    }}
+                  >
+                    {/* Specular Chrome Inner Rim + Dark Recessed Gap */}
+                    <div
+                      className="w-full h-full rounded-full p-[7px] flex items-center justify-center"
+                      style={{
+                        background:
+                          'linear-gradient(180deg, #ffffff 0%, #9ca3af 38%, #1f2937 78%, #4b5563 100%)',
+                        boxShadow: 'inset 0 3px 8px rgba(0,0,0,0.65)',
+                      }}
+                    >
+                      {/* Rotating Radial Spun-Metal Stainless Rotor */}
+                      <div
+                        style={{
+                          transform: `rotate(${currentAngleDeg}deg) scale(${
+                            axialPressed ? 0.976 : 1
+                          })`,
+                          backgroundImage: `
+                            repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,0.09) 0px, rgba(15,23,42,0.08) 1.2px, rgba(255,255,255,0.06) 2.4px),
+                            conic-gradient(from 18deg at 50% 50%,
+                              #8b929e 0deg,
+                              #eef2f8 34deg,
+                              #6f7785 74deg,
+                              #cfd6e2 112deg,
+                              #525967 154deg,
+                              #f8fafc 198deg,
+                              #767e8c 242deg,
+                              #d5dce6 286deg,
+                              #5b6270 326deg,
+                              #8b929e 360deg
+                            )
+                          `,
+                          boxShadow:
+                            'inset 0 1px 2px rgba(255,255,255,0.85), inset 0 -2px 6px rgba(15,23,42,0.45), 0 4px 10px rgba(0,0,0,0.45)',
+                        }}
+                        className="relative w-full h-full rounded-full border border-slate-300/80 flex flex-col items-center justify-start pt-3 transition-transform duration-75"
+                      >
+                        {/* Milled Dark Radial Index Mark (matching photo notch) */}
+                        <span
+                          className="w-[3.5px] h-6 rounded-sm bg-slate-900 border border-white/35"
+                          style={{
+                            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.9), 0 0 1px rgba(255,255,255,0.5)',
+                          }}
+                        />
+
+                        {/* Subtle Center Lathe Hub */}
+                        <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-slate-400/40 border border-white/40" />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
+            </div>
+
+            {/* Knob 3D / 2D Visual Variant Switcher */}
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setKnobVisualMode('3d-knurled')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold border cursor-pointer transition-colors ${
+                  knobVisualMode === '3d-knurled'
+                    ? 'bg-slate-900 text-white border-slate-700 dark:bg-emerald-400 dark:text-emerald-950'
+                    : 'bg-white/70 dark:bg-emerald-950/60 border-slate-300/80 dark:border-emerald-400/25 text-slate-700 dark:text-emerald-200'
+                }`}
+              >
+                🔩 Pokrętło 3D Radełkowane CNC
+              </button>
+              <button
+                type="button"
+                onClick={() => setKnobVisualMode('flat-2d')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold border cursor-pointer transition-colors ${
+                  knobVisualMode === 'flat-2d'
+                    ? 'bg-slate-900 text-white border-slate-700 dark:bg-emerald-400 dark:text-emerald-950'
+                    : 'bg-white/70 dark:bg-emerald-950/60 border-slate-300/80 dark:border-emerald-400/25 text-slate-700 dark:text-emerald-200'
+                }`}
+              >
+                ◎ Klasyczna tarcza 2D
+              </button>
             </div>
 
             {/* Precision Micro-Step & Axial Push Controls (Hitboxes >= 44px) */}

@@ -2293,7 +2293,7 @@ Paleta: ${palette}, Materiał dotyku: ${material}, Głębia cieni: ${JSON.string
               {
                 text:
                   question ||
-                  'Przeanalizuj ten projekt UI/obraz pod kątem głębi cieni, rozmycia szkła matowego, palety kolorów, sugerowanego materiału haptycznego (shiny-glass, frosted-glass, matte-metal, suede), twardości materiału (0-100) oraz podaj gotowy prompt odtwarzający ten styl.',
+                  'Przeanalizuj dokładnie ten projekt UI/obraz pod kątem: (1) WSZYSTKICH widocznych klikalnych przycisków i kontrolek (wykryj każdy wyraźny przycisk, podaj dokładne współrzędne w procentach 0-100: xPct, yPct, wPct, hPct, widoczną etykietę, rolę: primary/secondary/nav/icon oraz sugerowany profil z 4 doznań: glass-chime, metal-detent, tactile-dome, sub-velvet — NIE wymyślaj przycisków, których nie widać), (2) głębi cieni, rozmycia szkła, palety kolorów, sugerowanego materiału haptycznego (shiny-glass, frosted-glass, matte-metal, abs-plastic, suede), twardości (0-100) oraz gotowego promptu.',
               },
             ],
           },
@@ -2309,6 +2309,24 @@ Paleta: ${palette}, Materiał dotyku: ${material}, Głębia cieni: ${JSON.string
                 suggestedGlassBlur: { type: Type.INTEGER },
                 suggestedElevation: { type: Type.INTEGER },
                 extractedPrompt: { type: Type.STRING },
+                detectedButtons: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      label: { type: Type.STRING },
+                      role: { type: Type.STRING },
+                      xPct: { type: Type.NUMBER },
+                      yPct: { type: Type.NUMBER },
+                      wPct: { type: Type.NUMBER },
+                      hPct: { type: Type.NUMBER },
+                      shape: { type: Type.STRING },
+                      sensationType: { type: Type.STRING },
+                      confidence: { type: Type.NUMBER },
+                    },
+                    required: ['label', 'role', 'xPct', 'yPct', 'wPct', 'hPct'],
+                  },
+                },
               },
               required: [
                 'summary',
@@ -2317,6 +2335,7 @@ Paleta: ${palette}, Materiał dotyku: ${material}, Głębia cieni: ${JSON.string
                 'suggestedGlassBlur',
                 'suggestedElevation',
                 'extractedPrompt',
+                'detectedButtons',
               ],
             },
           },
@@ -2324,7 +2343,29 @@ Paleta: ${palette}, Materiał dotyku: ${material}, Głębia cieni: ${JSON.string
       );
 
       const parsed = JSON.parse((response.text ?? '{}').trim());
-      res.json({ ...parsed, analysisEngine: 'gemini-vision' });
+      const rawButtons = Array.isArray(parsed.detectedButtons) ? parsed.detectedButtons : [];
+      const sanitizedButtons = rawButtons
+        .filter((b: Record<string, unknown>) => b && typeof b.xPct === 'number' && typeof b.yPct === 'number')
+        .map((b: Record<string, unknown>, idx: number) => ({
+          id: `ai-btn-${idx + 1}`,
+          label: String(b.label || `Przycisk ${idx + 1}`).slice(0, 48),
+          role: String(b.role || 'secondary'),
+          xPct: Math.max(0, Math.min(96, Number(b.xPct) || 0)),
+          yPct: Math.max(0, Math.min(96, Number(b.yPct) || 0)),
+          wPct: Math.max(4, Math.min(90, Number(b.wPct) || 14)),
+          hPct: Math.max(3, Math.min(35, Number(b.hPct) || 6)),
+          shape: String(b.shape || 'pill'),
+          sensationType: String(b.sensationType || 'glass-chime'),
+          confidence: Math.max(0.35, Math.min(1, Number(b.confidence) || 0.86)),
+          source: 'gemini-vision',
+        }));
+      const mergedButtons =
+        sanitizedButtons.length > 0
+          ? sanitizedButtons
+          : Array.isArray(localMetrics?.detectedButtons)
+            ? localMetrics.detectedButtons
+            : [];
+      res.json({ ...parsed, detectedButtons: mergedButtons, analysisEngine: 'gemini-vision' });
     } catch {
       if (localMetrics && typeof localMetrics === 'object') {
         res.json({
@@ -2334,6 +2375,7 @@ Paleta: ${palette}, Materiał dotyku: ${material}, Głębia cieni: ${JSON.string
           suggestedGlassBlur: Number(localMetrics.suggestedGlassBlur) || 20,
           suggestedElevation: Number(localMetrics.suggestedElevation) || 18,
           extractedPrompt: String(localMetrics.extractedPrompt || ''),
+          detectedButtons: Array.isArray(localMetrics.detectedButtons) ? localMetrics.detectedButtons : [],
           analysisEngine: 'local-pixel-cv',
         });
         return;

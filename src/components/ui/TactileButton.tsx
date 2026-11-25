@@ -233,13 +233,15 @@ export const TactileButton: React.FC<TactileButtonProps> = ({
       : 'rgba(30, 41, 59, 0.14)';
 
   const specularAlpha =
-    (depth.specularRim / 100) * (effectiveMaterial === 'suede' ? 0.18 : 0.42);
+    (depth.specularRim / 100) * (effectiveMaterial === 'suede' ? 0.22 : 0.62);
 
   const boxShadowStyle = isPressed
-    ? `inset 0 1px 2px ${shadowColor}, inset 0 0.5px 0 rgba(255,255,255,${(specularAlpha * 0.35).toFixed(2)}), 0 0 4px ${effectiveGlowColor}33`
-    : selected || isHovered
-      ? `0 1px 2px ${shadowColor}, 0 0 4px ${effectiveGlowColor}28, inset 0 0.5px 0 rgba(255,255,255,${specularAlpha.toFixed(2)})`
-      : `0 1px 2px ${shadowColor}, inset 0 0.5px 0 rgba(255,255,255,${specularAlpha.toFixed(2)})`;
+    ? `inset 0 2px 5px ${shadowColor}, inset 0 1px 0 rgba(255,255,255,${(specularAlpha * 0.55).toFixed(2)}), 0 0 16px ${effectiveGlowColor}66, 0 0 0 1.5px ${effectiveGlowColor}88`
+    : selected
+      ? `0 6px 20px ${shadowColor}, 0 0 18px ${effectiveGlowColor}55, 0 0 0 1.5px ${effectiveGlowColor}99, inset 0 1px 0 rgba(255,255,255,${specularAlpha.toFixed(2)})`
+      : isHovered
+        ? `0 6px 18px ${shadowColor}, 0 0 16px ${effectiveGlowColor}4a, 0 0 0 1px ${effectiveGlowColor}77, inset 0 1px 0 rgba(255,255,255,${specularAlpha.toFixed(2)})`
+        : `0 2px 6px ${shadowColor}, inset 0 1px 0 rgba(255,255,255,${specularAlpha.toFixed(2)})`;
 
   // Compute tight flat micro-travel motion targets (minimal amplitude, precision audiophile switch feel)
   const holdTremorX =

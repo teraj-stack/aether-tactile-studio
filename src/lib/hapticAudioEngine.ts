@@ -761,45 +761,58 @@ class HapticAudioEngine {
     const outNode = this.getOutputNode(ctx);
     const now = ctx.currentTime;
 
-    // Tone 1: Machined metal shaft body resonance strictly < 160 Hz (34..155 Hz)
+    // Tone 1: Boosted machined metal shaft body punch strictly < 160 Hz (34..156 Hz)
     const clampedBaseHz = Math.max(36, Math.min(156, cal.lowBodyFreqHz));
     const detentHz = Math.min(
-      155,
+      156,
       Math.max(
-        34,
-        clampedBaseHz * (0.9 + normalizedPos * 0.16) * (isMajorTick ? 1.05 : 0.98)
+        36,
+        clampedBaseHz * (0.92 + normalizedPos * 0.16) * (isMajorTick ? 1.08 : 1.0)
       )
     );
-    const decaySec = isMajorTick ? 0.032 : 0.02;
+    const decaySec = isMajorTick ? 0.042 : 0.026;
 
     const osc = ctx.createOscillator();
-    osc.type = isMajorTick ? 'triangle' : 'sine';
-    osc.frequency.setValueAtTime(detentHz, now);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(30, detentHz * 0.62), now + decaySec);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(Math.min(160, detentHz * 1.28), now);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(30, detentHz * 0.54), now + decaySec);
 
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.setValueAtTime(156, now);
+    lp.frequency.setValueAtTime(160, now);
 
     const gain = ctx.createGain();
-    const bodyPeak = Math.min(0.32, 0.11 * strengthNorm * accent);
+    const bodyPeak = Math.min(0.62, 0.28 * strengthNorm * accent);
     gain.gain.setValueAtTime(bodyPeak, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + decaySec + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + decaySec + 0.005);
 
     osc.connect(lp);
     lp.connect(gain);
     gain.connect(outNode);
     osc.start(now);
-    osc.stop(now + decaySec + 0.008);
+    osc.stop(now + decaySec + 0.01);
 
-    // Tone 2: Calibrated classic mouse microswitch snap
+    // Tone 1b: Crisp CNC detent metallic tick transient for immediate tactile feel on touchpads/screens
+    const tickOsc = ctx.createOscillator();
+    tickOsc.type = 'sine';
+    tickOsc.frequency.setValueAtTime(isMajorTick ? 2850 : 2350, now);
+    tickOsc.frequency.exponentialRampToValueAtTime(1180, now + 0.008);
+    const tickGain = ctx.createGain();
+    tickGain.gain.setValueAtTime(Math.min(0.38, (isMajorTick ? 0.24 : 0.15) * strengthNorm * accent), now);
+    tickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.009);
+    tickOsc.connect(tickGain);
+    tickGain.connect(outNode);
+    tickOsc.start(now);
+    tickOsc.stop(now + 0.012);
+
+    // Tone 2: Boosted calibrated classic mouse microswitch snap
     const snapNorm = Math.max(0, Math.min(1, cal.mouseSnapBlend / 100));
     if (snapNorm > 0.02) {
       this.playClassicLeftMouseClick(
         ctx,
         outNode,
         now,
-        Math.min(1.15, snapNorm * strengthNorm * (isMajorTick ? 0.56 * accent : 0.34)),
+        Math.min(1.55, snapNorm * strengthNorm * (isMajorTick ? 0.92 * accent : 0.62)),
         isMajorTick ? 'press' : 'release'
       );
     }
@@ -1470,6 +1483,122 @@ class HapticAudioEngine {
       activePulseIndex: segIdx,
       activeMaterial,
     };
+  }
+  /**
+   * Dedicated Crystalline Glass / Cymbałki (Glockenspiel) modal synthesizer:
+   * Long high-frequency resonant phase with harmonic bar partials (1 : 2.756 : 5.404)
+   * + crisp glass strike transient + optional synchronized haptic vibration.
+   */
+  public triggerGlassChime(options?: {
+    baseFreqHz?: number; // e.g. 1046.5 (C6) .. 2093 (C7)
+    resonanceMs?: number; // 140..950 ms (long crystalline tail)
+    brilliance?: number; // 0..100 high-frequency overtone shimmer
+    strikeHardness?: number; // 0..100 mallet attack crispness
+    vibrateMs?: number; // 0..45 ms haptic pulse
+    gain?: number; // 0.05..1.0
+  }): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const baseFreq = Math.max(440, Math.min(3600, options?.baseFreqHz ?? 1318.5)); // E6 default
+    const decaySec = Math.max(0.12, Math.min(1.1, (options?.resonanceMs ?? 480) / 1000));
+    const brilliance = Math.max(0, Math.min(1, (options?.brilliance ?? 78) / 100));
+    const hardness = Math.max(0, Math.min(1, (options?.strikeHardness ?? 72) / 100));
+    const masterAmp = Math.max(0.05, Math.min(0.85, options?.gain ?? 0.36));
+
+    const out = this.masterGain ?? ctx.destination;
+    this.lastTriggeredMaterial = 'shiny-glass';
+    this.pressImpulse = 1;
+
+    // High-Q optical glass / glockenspiel bar modal partials
+    const partials: Array<{ ratio: number; amp: number; decayMult: number; detuneCents?: number }> = [
+      { ratio: 1.0, amp: 1.0, decayMult: 1.0 },
+      { ratio: 1.0, amp: 0.34 * brilliance, decayMult: 0.96, detuneCents: 6.5 }, // crystalline shimmer beat
+      { ratio: 2.756, amp: 0.42 * (0.4 + brilliance * 0.6), decayMult: 0.68 },
+      { ratio: 5.404, amp: 0.18 * brilliance, decayMult: 0.44 },
+    ];
+
+    partials.forEach((p) => {
+      const freq = baseFreq * p.ratio;
+      if (freq > 14500) return;
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+      if (p.detuneCents) osc.detune.setValueAtTime(p.detuneCents, now);
+
+      const g = ctx.createGain();
+      const peak = masterAmp * p.amp * 0.42;
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(peak, now + 0.002 + (1 - hardness) * 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + decaySec * p.decayMult);
+
+      osc.connect(g);
+      g.connect(out);
+      osc.start(now);
+      osc.stop(now + decaySec * p.decayMult + 0.02);
+    });
+
+    // Crisp glass mallet strike transient
+    const strikeOsc = ctx.createOscillator();
+    strikeOsc.type = 'triangle';
+    strikeOsc.frequency.setValueAtTime(Math.min(7200, baseFreq * 3.2), now);
+    strikeOsc.frequency.exponentialRampToValueAtTime(baseFreq * 1.4, now + 0.014);
+    const strikeGain = ctx.createGain();
+    strikeGain.gain.setValueAtTime(masterAmp * (0.12 + hardness * 0.22), now);
+    strikeGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.016);
+    strikeOsc.connect(strikeGain);
+    strikeGain.connect(out);
+    strikeOsc.start(now);
+    strikeOsc.stop(now + 0.02);
+
+    const vib = Math.round(options?.vibrateMs ?? 12);
+    if (vib > 0 && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      try {
+        navigator.vibrate(vib);
+      } catch {
+        // Ignore browser vibration restrictions
+      }
+    }
+  }
+
+  /**
+   * 4 Core Audio-Tactile-Vibrational Sensation Profiles for Magic Sounds
+   */
+  public triggerFourCoreSensation(
+    profile: 'glass-chime' | 'metal-detent' | 'tactile-dome' | 'sub-velvet',
+    options?: { baseFreqHz?: number; resonanceMs?: number; brilliance?: number; gain?: number }
+  ): void {
+    if (profile === 'glass-chime') {
+      this.triggerGlassChime({
+        baseFreqHz: options?.baseFreqHz ?? 1318.5,
+        resonanceMs: options?.resonanceMs ?? 520,
+        brilliance: options?.brilliance ?? 82,
+        strikeHardness: 76,
+        vibrateMs: 10,
+        gain: options?.gain ?? 0.38,
+      });
+      return;
+    }
+    if (profile === 'metal-detent') {
+      this.triggerMinimalistLowClick('titanium-micro-detent-11ms', options?.gain ?? 0.65);
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        try { navigator.vibrate([12, 18, 8]); } catch {}
+      }
+      return;
+    }
+    if (profile === 'tactile-dome') {
+      this.triggerMinimalistLowClick('polymer-dome-snap-7ms', options?.gain ?? 0.62);
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        try { navigator.vibrate(14); } catch {}
+      }
+      return;
+    }
+    // sub-velvet: deep damped <140 Hz warmth + smooth vibration
+    this.triggerMinimalistLowClick('velvet-sub-pulse-14ms', options?.gain ?? 0.68);
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      try { navigator.vibrate([24, 14, 16]); } catch {}
+    }
   }
 }
 

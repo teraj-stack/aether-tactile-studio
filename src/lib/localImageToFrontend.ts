@@ -1,5 +1,19 @@
 import type { HapticMaterialType } from '../types/studio';
 
+export interface DetectedUiButton {
+  id: string;
+  label: string;
+  role: 'primary' | 'secondary' | 'nav' | 'icon';
+  xPct: number;
+  yPct: number;
+  wPct: number;
+  hPct: number;
+  shape: 'pill' | 'rounded' | 'circle';
+  sensationType: 'glass-chime' | 'metal-detent' | 'tactile-dome' | 'sub-velvet';
+  confidence: number;
+  source: 'local-cv' | 'gemini-vision';
+}
+
 export interface LocalPixelAnalysis {
   width: number;
   height: number;
@@ -28,6 +42,7 @@ export interface LocalPixelAnalysis {
   summary: string;
   extractedPrompt: string;
   sourceHeroDataUrl: string;
+  detectedButtons: DetectedUiButton[];
 }
 
 export interface GeneratedGraphicAsset {
@@ -339,8 +354,15 @@ export async function analyzeImagePixels(imageDataUrl: string): Promise<LocalPix
   heroCanvas.width = targetHeroW;
   heroCanvas.height = targetHeroH;
   const hCtx = heroCanvas.getContext('2d');
+  let detectedButtons: DetectedUiButton[] = [];
   if (hCtx) {
     hCtx.drawImage(img, 0, 0, targetHeroW, targetHeroH);
+    try {
+      const imgData = hCtx.getImageData(0, 0, targetHeroW, targetHeroH);
+      detectedButtons = detectButtonsLocally(imgData.data, targetHeroW, targetHeroH, dominantBg);
+    } catch {
+      detectedButtons = [];
+    }
   }
   const sourceHeroDataUrl = heroCanvas.toDataURL('image/png');
 
@@ -353,7 +375,7 @@ export async function analyzeImagePixels(imageDataUrl: string): Promise<LocalPix
     .filter(Boolean)
     .join(', ');
 
-  const summary = `Analiza pikseli (${origW}×${origH}px): wykryto motyw ${themePl}, kontrast ${contrastScore}/100, ostrość krawędzi ${edgeDensity}/100 oraz strukturę: ${layoutDesc}. Dominujące barwy: ${palette.slice(0, 4).join(', ')}.`;
+  const summary = `Analiza pikseli (${origW}×${origH}px): wykryto motyw ${themePl}, kontrast ${contrastScore}/100, ostrość krawędzi ${edgeDensity}/100, ${detectedButtons.length} kandydatów na przyciski UI oraz strukturę: ${layoutDesc}. Dominujące barwy: ${palette.slice(0, 4).join(', ')}.`;
 
   const extractedPrompt = `Production-ready ${theme} desktop web UI (${origW}x${origH} reference) featuring ${hasSidebar ? 'left navigation sidebar, ' : ''}${hasTopBar ? 'sticky glass topbar, ' : ''}${suggestedColumns}-column bento card grid, background ${bgHex}, elevated ${suggestedMaterial} cards (${surfaceHex}), primary accent ${primaryAccentHex}, secondary highlight ${secondaryAccentHex}, blur ${suggestedGlassBlur}px, elevation ${suggestedElevation}px.`;
 
@@ -385,7 +407,140 @@ export async function analyzeImagePixels(imageDataUrl: string): Promise<LocalPix
     summary,
     extractedPrompt,
     sourceHeroDataUrl,
+    detectedButtons,
   };
+}
+
+function detectButtonsLocally(
+  rgba: Uint8ClampedArray,
+  w: number,
+  h: number,
+  bgRgb: [number, number, number]
+): DetectedUiButton[] {
+  const cols = 64;
+  const rows = 40;
+  const cellW = w / cols;
+  const cellH = h / rows;
+  const mask = new Uint8Array(cols * rows);
+  const satGrid = new Float32Array(cols * rows);
+
+  for (let r = 0; r < rows; r++) {
+    const py = Math.min(h - 1, Math.floor((r + 0.5) * cellH));
+    for (let c = 0; c < cols; c++) {
+      const px = Math.min(w - 1, Math.floor((c + 0.5) * cellW));
+      const idx = (py * w + px) * 4;
+      const cr = rgba[idx];
+      const cg = rgba[idx + 1];
+      const cb = rgba[idx + 2];
+      const distBg = colorDist([cr, cg, cb], bgRgb);
+      const [, sat] = rgbToHsl(cr, cg, cb);
+      satGrid[r * cols + c] = sat;
+      if (distBg > 52 || (sat > 0.34 && distBg > 28)) {
+        mask[r * cols + c] = 1;
+      }
+    }
+  }
+
+  const visited = new Uint8Array(cols * rows);
+  const candidates: Array<{
+    minC: number;
+    maxC: number;
+    minR: number;
+    maxR: number;
+    cells: number;
+    avgSat: number;
+  }> = [];
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const start = r * cols + c;
+      if (!mask[start] || visited[start]) continue;
+      const queue = [start];
+      visited[start] = 1;
+      let minC = c, maxC = c, minR = r, maxR = r, cells = 0, satSum = 0;
+      while (queue.length) {
+        const cur = queue.pop()!;
+        const cr = Math.floor(cur / cols);
+        const cc = cur % cols;
+        cells++;
+        satSum += satGrid[cur];
+        if (cc < minC) minC = cc;
+        if (cc > maxC) maxC = cc;
+        if (cr < minR) minR = cr;
+        if (cr > maxR) maxR = cr;
+        const dirs = [
+          [cr - 1, cc],
+          [cr + 1, cc],
+          [cr, cc - 1],
+          [cr, cc + 1],
+        ];
+        for (const [nr, nc] of dirs) {
+          if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+          const nIdx = nr * cols + nc;
+          if (mask[nIdx] && !visited[nIdx]) {
+            visited[nIdx] = 1;
+            queue.push(nIdx);
+          }
+        }
+      }
+      const bw = maxC - minC + 1;
+      const bh = maxR - minR + 1;
+      const fillRatio = cells / (bw * bh);
+      const wPct = (bw / cols) * 100;
+      const hPct = (bh / rows) * 100;
+      const aspect = (wPct * (w / Math.max(1, h))) / Math.max(1, hPct);
+      // Realistic UI button geometry: compact height, reasonable width, solid fill
+      if (wPct >= 4.5 && wPct <= 42 && hPct >= 2.5 && hPct <= 14 && fillRatio >= 0.55 && aspect >= 0.8 && aspect <= 10) {
+        candidates.push({ minC, maxC, minR, maxR, cells, avgSat: satSum / cells });
+      }
+    }
+  }
+
+  candidates.sort((a, b) => b.avgSat * 2 + b.cells / 40 - (a.avgSat * 2 + a.cells / 40));
+
+  return candidates.slice(0, 12).map((b, idx) => {
+    const xPct = Number(((b.minC / cols) * 100).toFixed(1));
+    const yPct = Number(((b.minR / rows) * 100).toFixed(1));
+    const wPct = Number((((b.maxC - b.minC + 1) / cols) * 100).toFixed(1));
+    const hPct = Number((((b.maxR - b.minR + 1) / rows) * 100).toFixed(1));
+    const isTop = yPct < 14;
+    const isPrimary = b.avgSat > 0.36 && !isTop;
+    const role: DetectedUiButton['role'] = isPrimary
+      ? 'primary'
+      : isTop
+        ? 'nav'
+        : wPct < 7 && hPct > 4
+          ? 'icon'
+          : 'secondary';
+    const sensationType: DetectedUiButton['sensationType'] =
+      role === 'primary'
+        ? 'glass-chime'
+        : role === 'nav'
+          ? 'tactile-dome'
+          : role === 'icon'
+            ? 'metal-detent'
+            : 'sub-velvet';
+    return {
+      id: `local-btn-${idx + 1}`,
+      label:
+        role === 'primary'
+          ? `CTA #${idx + 1}`
+          : role === 'nav'
+            ? `Nawigacja #${idx + 1}`
+            : role === 'icon'
+              ? `Ikona #${idx + 1}`
+              : `Przycisk #${idx + 1}`,
+      role,
+      xPct,
+      yPct,
+      wPct,
+      hPct,
+      shape: role === 'icon' ? 'circle' : wPct > hPct * 2.2 ? 'pill' : 'rounded',
+      sensationType,
+      confidence: Number(Math.min(0.94, 0.62 + b.avgSat * 0.45).toFixed(2)),
+      source: 'local-cv',
+    };
+  });
 }
 
 function svgToDataUrl(svg: string): string {
